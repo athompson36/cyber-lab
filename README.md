@@ -53,6 +53,16 @@ esptool --chip esp32s3 --port /dev/cu.usbmodem* write_flash 0x0 path/to/firmware
 | [current_project.md](current_project.md) | ESP32 & SBC project list and lab context. |
 | [inventory/README.md](inventory/README.md) | Hardware catalog: SBCs, controllers, sensors, accessories, components (specs + datasheets). |
 
+### Rebuild containers after code changes
+
+When you change the **inventory app** or **MCP server** code, rebuild the images so containers use the latest code:
+
+```bash
+./scripts/rebuild-containers.sh
+```
+
+Then start the inventory app with `docker compose -f inventory/app/docker-compose.yml up` (or `up --build` to build and start in one step).
+
 ---
 
 ## Devices
