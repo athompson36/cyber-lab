@@ -1,0 +1,54 @@
+# === Lab-wide: build and toolchain ===
+.pio/
+.pioenvs/
+.piolibdeps/
+build/
+*.bin
+*.elf
+*.map
+.idf/
+sdkconfig
+sdkconfig.old
+compile_commands.json
+cmake-build-*/
+out/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# === IDE / editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.direnv/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+*.textClipping
+
+# === Artifacts (optional: remove this line to track versioned firmware builds) ===
+artifacts/
+
+# === OTA / staging (optional) ===
+# ota/staging/
+
+# === Local overrides (never commit) ===
+*.local
+local/
+secrets/
+
+# === Map datasets (large; uncomment if you don't want to track tiles) ===
+# devices/t_deck_plus/maps/osm_tiles/
+
+# === Upstream firmware clones (clone into these paths per CONTEXT.md) ===
+t-beam_1w/t-beam 1w meshcore/
+t-beam_1w/meshtastic-tbeam-1w-firmware/

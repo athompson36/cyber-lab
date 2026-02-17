@@ -1,0 +1,43 @@
+# Lab Docker Containers
+
+Build firmware inside containers; flash from host (macOS). See [CONTEXT.md](../CONTEXT.md) for the container strategy.
+
+- **SDKs & tools (all devices):** [TOOLS_AND_SDK.md](TOOLS_AND_SDK.md)
+- **Apt/pip dependencies and rationale:** [DEPENDENCIES.md](DEPENDENCIES.md)
+
+## platformio-lab (primary)
+
+Single image that provides toolchains for **ESP32**, **Arduino** (Uno, etc.), **Teensy** (3.x, 4.x), and **ARM cross-compilation** for **Raspberry Pi** and **Pine64** SBCs. Used for Meshtastic, MeshCore, Arduino-based firmware, and ARM Linux builds.
+
+### Included toolchains / targets
+
+| Target | Toolchain / tool | Notes |
+|--------|------------------|--------|
+| ESP32 (all variants) | PlatformIO + espressif32 | ESP-IDF or Arduino framework |
+| Arduino Uno (AVR) | PlatformIO + atmelavr | ATmega328P |
+| Teensy 3.x / 4.x | PlatformIO + teensy | ARM Cortex-M4/M7 |
+| Raspberry Pi (Zero, 4, 5) | gcc-arm-linux-gnueabihf, gcc-aarch64-linux-gnu | 32-bit and 64-bit ARM |
+| Pine64 SBCs (Pine64, Rock64, RockPro64, PinePhone) | gcc-aarch64-linux-gnu | 64-bit ARM |
+| PineTime (nRF52832) | PlatformIO + nordicnrf52 | Zephyr/InfiniTime |
+
+### Build
+
+```bash
+docker build -t platformio-lab -f docker/Dockerfile .
+```
+
+### Run (example)
+
+```bash
+docker run --rm -v "$(pwd):/workspace" -w /workspace platformio-lab pio run -e T_Beam_1W_SX1262_repeater
+```
+
+## Other containers (future)
+
+- **esp-idf-lab**: ESP-IDF native, LVGL.
+- **rust-embedded-lab**: PineTime (Embassy), NRF, Rust targets.
+- **rf-lab**: SDR, spectrum, LoRa sniffing.
+
+## Golden rule
+
+Do not mix unrelated toolchains in one container. This image groups PlatformIO-based targets and ARM Linux toolchains that are commonly used together for device firmware and companion builds.
