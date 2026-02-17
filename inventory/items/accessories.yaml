@@ -1,0 +1,221 @@
+# Accessories — Antennas, cases, cables, expansion boards, displays
+# Schema: ../SCHEMA.md
+
+items:
+  - id: lora_868_antenna
+    name: LoRa 868 MHz antenna (rubber duck / whip)
+    manufacturer: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      frequency_mhz: 868
+      connector: "u.FL / IPEX"
+      gain_dbi: "~2"
+      impedance_ohm: 50
+    datasheet_url: ""
+    notes: "Region-dependent; 915 MHz for US."
+    used_in: [lora_mesh]
+    tags: [lora, antenna, 868]
+
+  - id: sh1106_oled_128x64
+    name: SH1106 OLED 128×64 I2C
+    manufacturer: ""
+    model: "0.96\" 128×64"
+    quantity: 0
+    location: "On T-Beam 1W"
+    specs:
+      interface: I2C
+      address_i2c: "0x3C"
+      voltage_v: "3.3–5"
+      dimensions_mm: "27×27"
+    datasheet_url: https://www.buydisplay.com/download/ic/SH1106.pdf
+    used_in: [t_beam_1w, midi_controller]
+    tags: [i2c, oled, display]
+
+  - id: usb_serial_cable
+    name: USB‑to‑serial cable (CP2102 / CH340 / FTDI)
+    manufacturer: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      interface: "USB 2.0"
+      voltage_v: "3.3 or 5 (selectable on some)"
+      pins: "TX, RX, GND, VCC (optional)"
+    datasheet_url: ""
+    used_in: []
+    tags: [usb, serial, uart, flashing]
+
+  - id: jst_2s_lipo
+    name: 2S LiPo 7.4 V (JST connector)
+    manufacturer: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      voltage_v: "7.4 nominal (6.0–8.4)"
+      capacity_mah: "Variable"
+      connector: "JST (T-Beam compatible)"
+    datasheet_url: ""
+    notes: "T-Beam 1W uses 2S; check polarity and capacity for your board."
+    used_in: [lora_mesh, t_beam_1w]
+    tags: [battery, lipo, 2s]
+
+  - id: raspberry_pi_40pin_header
+    name: Raspberry Pi 40-pin GPIO header / HAT
+    manufacturer: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      interface: "40-pin 2.54 mm"
+      compatibility: "RPi 4/5, Zero 2, Rock64, etc."
+    datasheet_url: https://www.raspberrypi.com/documentation/computers/raspberry-pi-4.html
+    used_in: [digital_mixer]
+    tags: [rpi, gpio, 40pin]
+
+  - id: t_deck_plus
+    name: LilyGO T-Deck Plus (keyboard, display, LoRa)
+    manufacturer: LilyGO
+    model: "T-Deck Plus"
+    quantity: 0
+    location: ""
+    specs:
+      mcu: ESP32-S3
+      display: "IPS, touch"
+      keyboard: "QWERTY"
+      radio: "LoRa (SX1262)"
+      interfaces: "USB-C, expansion"
+    datasheet_url: https://github.com/Xinyuan-LilyGO/LilyGo-T-Deck-Plus
+    notes: "Launcher, maps (e.g. JustDr00py/tdeck-maps), Meshtastic."
+    used_in: [t_deck_plus]
+    tags: [esp32, lora, keyboard, display, meshtastic]
+
+  - id: teensy_4_1_ethernet_kit
+    name: Ethernet kit for Teensy 4.1
+    manufacturer: PJRC
+    model: "Ethernet kit 4.1"
+    quantity: 1
+    location: Lab
+    specs:
+      compatible: Teensy 4.1
+      interface: "10/100 Ethernet (W5500 or similar)"
+    datasheet_url: https://www.pjrc.com/store/ethernet_kit.html
+    used_in: []
+    tags: [teensy, ethernet]
+
+  - id: raspberry_pi_m2_hat_plus
+    name: Raspberry Pi M.2 HAT+
+    manufacturer: Raspberry Pi Foundation
+    model: "M.2 HAT+"
+    quantity: 1
+    location: Lab
+    specs:
+      compatible: "Raspberry Pi 5"
+      interface: "M.2 NVMe or SATA (PCIe)"
+    datasheet_url: https://www.raspberrypi.com/documentation/accessories/raspberry-pi-m2-hat.html
+    used_in: []
+    tags: [rpi, m2, nvme, storage]
+
+  - id: raspberry_pi_7in_touchscreen_case
+    name: 7" Raspberry Pi touchscreen case
+    manufacturer: ""
+    model: "7 inch touchscreen case"
+    quantity: 1
+    location: Lab
+    specs:
+      compatible: "Raspberry Pi (official 7\" display)"
+      display: "7\" IPS touch"
+    datasheet_url: ""
+    used_in: [digital_mixer, media_player_hybrid]
+    tags: [rpi, display, touchscreen, case]
+
+  - id: badassmidi_anamux
+    name: BadassMIDI.com Anamux
+    manufacturer: BadassMIDI.com
+    model: Anamux
+    quantity: 2
+    location: Lab
+    specs:
+      interface: MIDI
+      description: "Analog multiplexer for MIDI"
+    datasheet_url: ""
+    used_in: [midi_controller, maschine_mk2_mod]
+    tags: [midi, analog, multiplexer]
+
+  - id: badassmidi_muxin16
+    name: BadassMIDI.com MUXIN-16
+    manufacturer: BadassMIDI.com
+    model: MUXIN-16
+    quantity: 2
+    location: Lab
+    specs:
+      interface: MIDI
+      description: "16-input multiplexer for MIDI"
+    datasheet_url: ""
+    used_in: [midi_controller]
+    tags: [midi, multiplexer, 16ch]
+
+  - id: badassmidi_midi_chip
+    name: BadassMIDI.com MIDI CHIP
+    manufacturer: BadassMIDI.com
+    model: "MIDI CHIP"
+    quantity: 2
+    location: Lab
+    specs:
+      interface: MIDI
+    datasheet_url: ""
+    used_in: [midi_controller]
+    tags: [midi]
+
+  - id: badassmidi_pixelstomp
+    name: BadassMIDI.com Pixelstomp
+    manufacturer: BadassMIDI.com
+    model: Pixelstomp
+    quantity: 2
+    location: Lab
+    specs:
+      interface: MIDI
+    datasheet_url: ""
+    used_in: [midi_controller]
+    tags: [midi]
+
+  - id: ec11b15242az_encoder
+    name: EC11B15242AZ 5V encoder
+    manufacturer: ""
+    part_number: EC11B15242AZ
+    model: "5V rotary encoder with push"
+    quantity: 2
+    location: Lab
+    specs:
+      voltage_v: 5
+      type: "Incremental rotary encoder"
+    datasheet_url: ""
+    used_in: [midi_controller]
+    tags: [encoder, 5v, rotary]
+
+  - id: push_button_rotary_encoder
+    name: Push button rotary encoder (generic)
+    manufacturer: ""
+    model: ""
+    quantity: 5
+    location: Lab
+    specs:
+      type: "Rotary encoder with push switch"
+    datasheet_url: ""
+    used_in: [midi_controller]
+    tags: [encoder, rotary, push]
+
+  - id: roland_mc307_micro_switch
+    name: Push button micro switch (Roland MC-307 style)
+    manufacturer: ""
+    model: "As used in Roland MC-307"
+    quantity: 48
+    location: Lab
+    specs:
+      type: "Tactile / micro push button"
+      application: "Drum pads, grid controllers"
+    datasheet_url: ""
+    used_in: [midi_controller, maschine_mk2_mod]
+    tags: [switch, push, midi, roland]

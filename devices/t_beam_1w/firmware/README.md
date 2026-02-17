@@ -33,14 +33,37 @@ firmware/
 └── custom/            # Custom firmware
 ```
 
-## Current locations (before migration)
+## Device layout: symlink vs copy
 
-Until the lab migration is complete, firmware lives at:
+**Goal:** Map upstream firmware repos into this device folder so builds and overlays stay under the lab contract.
 
-- **MeshCore (T-Beam 1W variant):** `../../t-beam_1w/t-beam 1w meshcore`
-- **Meshtastic port (tbeam-1w):** `../../t-beam_1w/meshtastic-tbeam-1w-firmware`
+### Option A — Symlink (current, minimal change)
 
-After migration, `repo/` will hold the upstream clones and `overlays/` the T-Beam 1W–specific patches and config (variant, platformio env, PA/fan/battery fixes).
+- Clone repos **outside** this directory (e.g. repo root) so they remain in `.gitignore`.
+- **Symlink** from `devices/t_beam_1w/firmware/` into those clones so paths are consistent.
+
+| Firmware   | Clone location (repo root)              | Symlink target |
+|------------|------------------------------------------|----------------|
+| MeshCore   | `t-beam_1w/t-beam 1w meshcore/`          | `firmware/meshcore/repo` → `../../../t-beam_1w/t-beam 1w meshcore` |
+| Meshtastic | `t-beam_1w/meshtastic-tbeam-1w-firmware/`| `firmware/meshtastic/repo` → `../../../t-beam_1w/meshtastic-tbeam-1w-firmware` |
+
+**Pros:** No copy; upstream stays pristine; `.gitignore` already excludes the clone paths.  
+**Cons:** You must create the symlinks after cloning (see [t_beam_1w/README.md](../../t_beam_1w/README.md) or repo root README).
+
+### Option B — Copy under firmware/
+
+- Create `firmware/meshcore/repo/` and `firmware/meshtastic/repo/` and **clone or copy** upstream into them.
+- Overlays go in `firmware/meshcore/overlays/` and `firmware/meshtastic/overlays/` (patches, platformio env fragments).
+
+**Pros:** Everything for this device lives under `devices/t_beam_1w/firmware/`.  
+**Cons:** Duplicates repo; need to pull/merge upstream manually or via script.
+
+### Current state
+
+- **MeshCore (T-Beam 1W variant):** clone at repo root `t-beam_1w/t-beam 1w meshcore/` (gitignored). Build from that path; no symlink under `devices/` yet.
+- **Meshtastic (tbeam-1w port):** clone at repo root `t-beam_1w/meshtastic-tbeam-1w-firmware/` (gitignored).
+
+To align with Option A: create `firmware/meshcore/` and `firmware/meshtastic/` here, then add symlinks `meshcore/repo` → `../../../t-beam_1w/t-beam 1w meshcore` and `meshtastic/repo` → `../../../t-beam_1w/meshtastic-tbeam-1w-firmware`. Build from `firmware/<name>/repo` so the orchestrator can use a single pattern per device.
 
 ## Build
 

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block content %}
+  <nav class="tabs" role="tablist" aria-label="Main sections">
+    <button type="button" class="tab-btn active" role="tab" id="tab-btn-search" data-tab="search" aria-selected="true">Search</button>
+    <button type="button" class="tab-btn" role="tab" id="tab-btn-settings" data-tab="settings" aria-selected="false">AI settings</button>
+    <button type="button" class="tab-btn" role="tab" id="tab-btn-docker" data-tab="docker" aria-selected="false">Docker &amp; tools</button>
+    <button type="button" class="tab-btn" role="tab" id="tab-btn-flash" data-tab="flash" aria-selected="false">Backup / Flash</button>
+    <button type="button" class="tab-btn" role="tab" id="tab-btn-projects" data-tab="projects" aria-selected="false">Project planning</button>
+    <button type="button" class="tab-btn" role="tab" id="tab-btn-inventory" data-tab="inventory" aria-selected="false">Inventory</button>
+  </nav>
+
+  <div class="tab-panels">
+  <section class="tab-panel active" id="panel-search" role="tabpanel" aria-labelledby="tab-btn-search">
+  <section class="toolbar">
+    <div class="search-row">
+      <input type="text" id="search" placeholder="Search name, part number, tags…" autocomplete="off">
+      <select id="category">
+        <option value="">All categories</option>
+      </select>
+      <button type="button" id="btn-search">Search</button>
+    </div>
+    <div class="ai-row">
+      <div class="ai-input-wrap">
+        <input type="text" id="ai-query" placeholder="Ask: e.g. What do I have for MIDI? Teensy boards? 5V parts?" autocomplete="off">
+        <button type="button" id="btn-ai-voice" class="btn-voice" title="Voice input" aria-label="Voice input">🎤</button>
+      </div>
+      <button type="button" id="btn-ai">AI query</button>
+      <div id="ai-answer" class="ai-answer" aria-live="polite"></div>
+    </div>
+  </section>
+  </section>
+
+  <section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-btn-settings" hidden>
+  <section class="settings-section" id="settings-section">
+    <div class="settings-heading-row">
+      <h2 class="settings-heading">AI API settings</h2>
+      <button type="button" id="btn-settings-save" class="btn-refresh">Save</button>
+    </div>
+    <p class="settings-note">Configure the API key and model for AI query and project planning. Key can also be set via <code>OPENAI_API_KEY</code> (env overrides this). Stored under <code>artifacts/ai_settings.json</code>.</p>
+    <div class="settings-fields">
+      <div class="settings-row">
+        <label for="settings-api-key">API key</label>
+        <span id="settings-api-key-status" class="settings-status">—</span>
+        <input type="password" id="settings-api-key" placeholder="Enter key to set or change; leave blank to keep" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-model">Model</label>
+        <input type="text" id="settings-model" placeholder="gpt-4o-mini" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-base-url">Base URL</label>
+        <input type="text" id="settings-base-url" placeholder="Optional (e.g. OpenAI-compatible proxy)" autocomplete="off">
+      </div>
+    </div>
+    <span id="settings-save-status" class="flash-status"></span>
+  </section>
+  </section>
+
+  <section class="tab-panel" id="panel-docker" role="tabpanel" aria-labelledby="tab-btn-docker" hidden>
+  <section class="docker-section" id="docker-section">
+    <div class="docker-heading-row">
+      <h2 class="docker-heading">Docker &amp; tools</h2>
+      <button type="button" id="btn-docker-refresh" class="btn-refresh">Refresh</button>
+    </div>
+    <div class="docker-status" id="docker-status">Checking…</div>
+    <p class="docker-hint">If this app is running in a container, the host Docker daemon is not visible unless you mount the socket: <code>-v /var/run/docker.sock:/var/run/docker.sock</code> (and install Docker CLI in the image).</p>
+    <div class="docker-containers-block">
+      <h3 class="docker-subheading">Containers</h3>
+      <p class="docker-containers-hint">Start, stop, or restart lab-related containers. Refresh after an action to see updated status.</p>
+      <div class="docker-containers-actions">
+        <button type="button" id="btn-docker-containers-refresh" class="btn-refresh">Refresh containers</button>
+        <span id="docker-containers-message" class="flash-status"></span>
+      </div>
+      <div class="docker-containers-table-wrap">
+        <table class="docker-containers-table" id="docker-containers-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Image</th>
+              <th>State</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="docker-containers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="docker-tools" id="docker-tools"></div>
+  </section>
+  </section>
+
+  <section class="tab-panel" id="panel-flash" role="tabpanel" aria-labelledby="tab-btn-flash" hidden>
+  <section class="flash-section" id="flash-section">
+    <div class="flash-heading-row">
+      <h2 class="flash-heading">Backup / Restore / Flash</h2>
+      <button type="button" id="btn-flash-refresh" class="btn-refresh">Refresh ports</button>
+    </div>
+    <p class="flash-note">Firmware and settings: backup to .bin, restore from .bin, or flash a build. Device must be connected via USB; <strong>esptool</strong> must be installed on the host.</p>
+    <div class="flash-sd-note" role="note">SD card: devices with an SD slot (e.g. T-Beam) are not backed up or restored through this interface. Remove the card and use host tools (e.g. disk image / dd) to image or restore the SD.</div>
+    <div class="flash-controls">
+      <div class="flash-row">
+        <label for="flash-port">Port</label>
+        <select id="flash-port">
+          <option value="">— Select port —</option>
+        </select>
+        <label for="flash-device">Device</label>
+        <select id="flash-device">
+          <option value="">— Select device —</option>
+        </select>
+      </div>
+      <div class="flash-actions">
+        <div class="flash-action-block">
+          <h3>Backup</h3>
+          <select id="flash-backup-type">
+            <option value="full">Full flash</option>
+            <option value="app">App partition (0x10000)</option>
+            <option value="nvs">NVS (0x9000)</option>
+          </select>
+          <button type="button" id="btn-flash-backup">Backup</button>
+          <span id="flash-backup-status" class="flash-status"></span>
+        </div>
+        <div class="flash-action-block">
+          <h3>Restore</h3>
+          <select id="flash-restore-file">
+            <option value="">— Select file or upload —</option>
+          </select>
+          <input type="file" id="flash-restore-upload" accept=".bin" style="display:none">
+          <button type="button" id="btn-flash-restore-choose">Upload .bin…</button>
+          <button type="button" id="btn-flash-restore">Restore</button>
+          <span id="flash-restore-status" class="flash-status"></span>
+        </div>
+        <div class="flash-action-block">
+          <h3>Flash</h3>
+          <select id="flash-flash-file">
+            <option value="">— Select file or upload —</option>
+          </select>
+          <input type="file" id="flash-flash-upload" accept=".bin" style="display:none">
+          <button type="button" id="btn-flash-flash-choose">Upload .bin…</button>
+          <button type="button" id="btn-flash-flash">Flash</button>
+          <span id="flash-flash-status" class="flash-status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+  </section>
+
+  <section class="tab-panel" id="panel-projects" role="tabpanel" aria-labelledby="tab-btn-projects" hidden>
+  <section class="projects-section" id="projects-section">
+    <div class="projects-heading-row">
+      <h2 class="projects-heading">Project planning</h2>
+      <button type="button" id="btn-project-new" class="btn-refresh">New project</button>
+    </div>
+    <p class="projects-note">Develop an idea with the AI; it will check your inventory and suggest a parts BOM. Export for Digi-Key (primary) or Mouser (backup). Proposals are saved in the Docker container.</p>
+    <div class="projects-controls">
+      <div class="projects-row">
+        <label for="project-select">Saved project</label>
+        <select id="project-select">
+          <option value="">— New or select —</option>
+        </select>
+      </div>
+      <div class="project-editor" id="project-editor">
+        <div class="project-meta">
+          <input type="text" id="project-title" placeholder="Project title">
+          <textarea id="project-description" placeholder="Description / idea (optional)" rows="2"></textarea>
+        </div>
+        <div class="project-chat">
+          <h3>Develop with AI</h3>
+          <div id="project-messages" class="project-messages"></div>
+          <div class="project-chat-input">
+            <input type="text" id="project-message" placeholder="Describe your idea or ask for parts…" autocomplete="off">
+            <button type="button" id="btn-project-voice" class="btn-voice" title="Voice input" aria-label="Voice input">🎤</button>
+            <button type="button" id="btn-project-send">Send</button>
+          </div>
+        </div>
+        <div class="project-bom">
+          <h3>Parts BOM</h3>
+          <div class="project-bom-actions">
+            <button type="button" id="btn-project-check-inv">Check inventory</button>
+            <a id="btn-bom-digikey" href="#" class="btn-link" download="bom_digikey.csv">Export for Digi-Key</a>
+            <a id="btn-bom-mouser" href="#" class="btn-link" download="bom_mouser.csv">Export for Mouser</a>
+          </div>
+          <div class="project-bom-table-wrap">
+            <table class="project-bom-table" id="project-bom-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Part #</th>
+                  <th>Qty</th>
+                  <th>On hand</th>
+                  <th>Shortfall</th>
+                </tr>
+              </thead>
+              <tbody id="project-bom-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="project-save-row">
+          <button type="button" id="btn-project-save">Save proposal</button>
+          <span id="project-save-status" class="flash-status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+  </section>
+
+  <section class="tab-panel" id="panel-inventory" role="tabpanel" aria-labelledby="tab-btn-inventory" hidden>
+  <section class="results-header">
+    <span id="results-count">—</span> items
+  </section>
+
+  <section class="table-wrap">
+    <table class="inventory-table" id="inventory-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Qty</th>
+          <th>Part #</th>
+          <th>Location</th>
+          <th>Datasheet</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+      </tbody>
+    </table>
+  </section>
+  </section>
+
+  </div>
+
+  <section class="detail-panel" id="detail-panel" hidden>
+    <button type="button" class="close-detail" id="close-detail" aria-label="Close">×</button>
+    <div id="detail-content"></div>
+  </section>
+{% endblock %}

@@ -17,6 +17,7 @@ out/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-inventory/
 venv/
 .env
 .env.*
@@ -37,6 +38,10 @@ Thumbs.db
 
 # === Artifacts (optional: remove this line to track versioned firmware builds) ===
 artifacts/
+!artifacts/README.md
+
+# === Inventory (generated DB; YAML is source of truth) ===
+inventory/inventory.db
 
 # === OTA / staging (optional) ===
 # ota/staging/

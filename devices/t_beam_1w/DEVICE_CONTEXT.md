@@ -46,6 +46,8 @@ Single-board LoRa node with ESP32-S3, Semtech SX1262 sub-GHz LoRa, 1W external P
 
 ## Critical Hardware Rules
 
+See **[shared/t_beam_1w/RF_PA_FAN_PMU.md](../../shared/t_beam_1w/RF_PA_FAN_PMU.md)** for canonical RF/PA/fan/PMU rules. Summary:
+
 1. **GPIO 40** must be driven HIGH before SX1262/radio init (powers radio + PA LDO).
 2. **TX power** must be capped at 22 dBm for 1W PA safety; PA ramp time ≥ 800 µs.
 3. **Single I2C bus** only (Wire on 8/9); do not use Wire1.

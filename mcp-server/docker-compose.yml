@@ -1,0 +1,24 @@
+# Build the MCP server image. The server uses stdio; run it from Cursor or CLI
+# with the repo mounted so it can read PROJECT_CONTEXT.md, devices/, inventory/, etc.
+#
+# Build (from repo root):
+#   docker compose -f mcp-server/docker-compose.yml build
+#
+# Run via Cursor: use command below in MCP config (see README).
+# Or test stdio locally:
+#   docker compose -f mcp-server/docker-compose.yml run --rm -v "$(pwd)":/workspace -e ESP32_LAB_REPO_ROOT=/workspace mcp
+
+services:
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: esp32-lab-mcp
+    # Stdio: no ports. Mount repo so server can read files.
+    volumes:
+      - ../..:/workspace:ro
+    environment:
+      - ESP32_LAB_REPO_ROOT=/workspace
+    stdin_open: true
+    tty: false
+    # Default command from Dockerfile (node dist/index.js)

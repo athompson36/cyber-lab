@@ -63,6 +63,7 @@ Host builds are discouraged unless absolutely required.
     ├── toolchains/
     ├── shared/
     ├── artifacts/
+    ├── inventory/      # Hardware catalog: SBCs, controllers, sensors, components (specs + datasheets)
     ├── ota/
     ├── datasets/
     │

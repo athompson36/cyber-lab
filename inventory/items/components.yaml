@@ -1,0 +1,332 @@
+# Components — Discrete parts and ICs
+# Schema: ../SCHEMA.md
+
+items:
+  - id: sx1262
+    name: Semtech SX1262 Sub-GHz transceiver
+    manufacturer: Semtech
+    part_number: SX1262
+    model: ""
+    quantity: 0
+    location: "On T-Beam 1W"
+    specs:
+      interface: SPI
+      frequency_mhz: "150–960"
+      modulation: "LoRa, FSK, etc."
+      voltage_v: "2.0–3.6"
+      current_tx_ma: "~120 (max TX)"
+    datasheet_url: https://www.semtech.com/products/wireless-transceivers/sx1261-2-sub-ghz-transceivers
+    notes: "1W PA external on T-Beam; respect TX power and ramp time."
+    used_in: [t_beam_1w, lora_mesh]
+    tags: [lora, spi, transceiver]
+
+  - id: axp2101
+    name: AXP2101 PMU (power management)
+    manufacturer: X-Powers
+    part_number: AXP2101
+    model: ""
+    quantity: 0
+    location: "On T-Beam 1W (some variants)"
+    specs:
+      interface: I2C
+      address_i2c: "0x34"
+      voltage_v: "2.5–5.5 input"
+      outputs: "Multiple LDO/DCDC; battery charge"
+    datasheet_url: https://www.x-powers.com/en/Product/Detail?id=2
+    notes: "Optional on cost-reduced T-Beam; check board variant."
+    used_in: [t_beam_1w]
+    tags: [i2c, pmu, power]
+
+  - id: ams1117_3v3
+    name: AMS1117-3.3 LDO regulator
+    manufacturer: Advanced Monolithic Systems
+    part_number: AMS1117-3.3
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      voltage_in_v: "4.75–12"
+      voltage_out_v: 3.3
+      current_max_a: 1
+      package: "SOT-223, SMD"
+    datasheet_url: https://www.ams.com/en/ams1117
+    tags: [ldo, 3.3v, regulator]
+
+  - id: resistor_10k
+    name: 10 kΩ resistor (through-hole / SMD)
+    manufacturer: ""
+    part_number: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      resistance_ohm: 10000
+      power_w: "0.25 typical"
+      tolerance: "5%"
+    datasheet_url: ""
+    tags: [resistor, pullup, pulldown]
+
+  - id: capacitor_100nf
+    name: 100 nF ceramic capacitor (decoupling)
+    manufacturer: ""
+    part_number: ""
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      capacitance_nf: 100
+      voltage_v: "10–50"
+      package: "0805, 0603, etc."
+    datasheet_url: ""
+    tags: [capacitor, decoupling]
+
+  - id: connector_jst_2pin
+    name: JST 2-pin connector (battery style)
+    manufacturer: JST
+    part_number: ""
+    model: "PH 2.0 mm typical"
+    quantity: 0
+    location: ""
+    specs:
+      pitch_mm: 2.0
+      pins: 2
+      current_a: "~2"
+    datasheet_url: ""
+    used_in: [t_beam_1w]
+    tags: [connector, jst, battery]
+
+  - id: esp32_wroom_32
+    name: ESP32-WROOM-32 module
+    manufacturer: Espressif
+    part_number: ESP32-WROOM-32
+    model: ""
+    quantity: 0
+    location: ""
+    specs:
+      mcu: ESP32
+      flash_mb: 4
+      ram_mb: 520
+      voltage_v: 3.3
+      wireless: "WiFi, BLE"
+    datasheet_url: https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
+    used_in: []
+    tags: [esp32, module, wifi, ble]
+
+  - id: esp32_s3_wroom_1
+    name: ESP32-S3-WROOM-1 module
+    manufacturer: Espressif
+    part_number: ESP32-S3-WROOM-1
+    model: ""
+    quantity: 0
+    location: "On T-Beam 1W"
+    specs:
+      mcu: ESP32-S3
+      flash_mb: 8
+      psram_mb: 8
+      voltage_v: 3.3
+      wireless: "WiFi, BLE"
+    datasheet_url: https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf
+    used_in: [t_beam_1w]
+    tags: [esp32, esp32-s3, module, wifi, ble]
+
+  - id: irfz44n
+    name: IRFZ44N N-channel MOSFET
+    manufacturer: Infineon / various
+    part_number: IRFZ44N
+    model: ""
+    quantity: 15
+    location: Lab
+    specs:
+      type: "N-channel power MOSFET"
+      vds_v: 55
+      id_a: 49
+      package: TO-220
+    datasheet_url: https://www.infineon.com/cms/en/product/power/mosfet/automotive-mosfet/irfz44n/
+    tags: [mosfet, n-channel, to-220]
+
+  - id: pdse1_s5_s24_s
+    name: PDSE1-S5-S24-S relay
+    manufacturer: ""
+    part_number: PDSE1-S5-S24-S
+    model: ""
+    quantity: 4
+    location: Lab
+    specs:
+      type: "Signal relay"
+    datasheet_url: ""
+    tags: [relay]
+
+  - id: rd16hhf1
+    name: RD16HHF1
+    manufacturer: ""
+    part_number: RD16HHF1
+    model: ""
+    quantity: 2
+    location: Lab
+    specs: {}
+    datasheet_url: ""
+    tags: []
+
+  - id: eeu_ta1v221
+    name: EEU-TA1V221 electrolytic capacitor
+    manufacturer: ""
+    part_number: EEU-TA1V221
+    model: ""
+    quantity: 2
+    location: Lab
+    specs:
+      capacitance_uf: 220
+      voltage_v: 35
+      type: "Electrolytic"
+    datasheet_url: ""
+    tags: [capacitor, electrolytic]
+
+  - id: sozo_3061_22nf
+    name: SOZO 3061 22 nF capacitor
+    manufacturer: SOZO
+    part_number: "3061"
+    model: "22 nF"
+    quantity: 1
+    location: Lab
+    specs:
+      capacitance_nf: 22
+      type: "Film / tone cap"
+    datasheet_url: ""
+    tags: [capacitor, film]
+
+  - id: sozo_3060_47nf
+    name: SOZO 3060 47 nF capacitor
+    manufacturer: SOZO
+    part_number: "3060"
+    model: "47 nF"
+    quantity: 1
+    location: Lab
+    specs:
+      capacitance_nf: 47
+      type: "Film / tone cap"
+    datasheet_url: ""
+    tags: [capacitor, film]
+
+  - id: w25q128_fvssi
+    name: W25Q128 FVSSI SPI Flash
+    manufacturer: Winbond
+    part_number: W25Q128FVSSI
+    model: ""
+    quantity: 3
+    location: Lab
+    specs:
+      capacity_mbit: 128
+      interface: SPI
+      voltage_v: "2.7–3.6"
+    datasheet_url: https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/
+    tags: [flash, spi, winbond]
+
+  - id: electrocookie_x002d5hs33
+    name: ElectroCookie X002D5HS33
+    manufacturer: ElectroCookie
+    part_number: X002D5HS33
+    model: ""
+    quantity: 1
+    location: Lab
+    specs: {}
+    datasheet_url: ""
+    tags: []
+
+  - id: cf14jt3k30
+    name: CF14JT3K30 30 kΩ resistor
+    manufacturer: ""
+    part_number: CF14JT3K30
+    model: "30k carbon film"
+    quantity: 8
+    location: Lab
+    specs:
+      resistance_ohm: 30000
+      type: "Carbon film"
+    datasheet_url: ""
+    tags: [resistor, 30k, pullup]
+
+  - id: mcp4251
+    name: MCP4251 digital potentiometer
+    manufacturer: Microchip
+    part_number: MCP4251
+    model: ""
+    quantity: 1
+    location: Lab
+    specs:
+      interface: SPI
+      resistance_ohm: 50k
+      type: "Dual 8-bit digital pot"
+    datasheet_url: https://www.microchip.com/en-us/product/MCP4251
+    tags: [digital potentiometer, spi]
+
+  - id: sa571n
+    name: SA571N compander IC
+    manufacturer: Philips/NXP
+    part_number: SA571N
+    model: ""
+    quantity: 5
+    location: Lab
+    specs:
+      type: "Compander (compressor/expander) for audio"
+    datasheet_url: ""
+    notes: "2× SA571-N and 3× SA571N listed."
+    tags: [audio, compander, ic]
+
+  - id: lm3900n
+    name: LM3900N quad op-amp
+    manufacturer: Texas Instruments
+    part_number: LM3900N
+    model: ""
+    quantity: 1
+    location: Lab
+    specs:
+      type: "Quad Norton op-amp"
+      package: DIP-14
+    datasheet_url: https://www.ti.com/product/LM3900
+    tags: [op-amp, analog, dip]
+
+  - id: rca_549
+    name: RCA 549
+    manufacturer: RCA
+    part_number: 549
+    model: ""
+    quantity: 1
+    location: Lab
+    specs: {}
+    datasheet_url: ""
+    tags: []
+
+  - id: lm723_5d
+    name: 723-5D voltage regulator
+    manufacturer: ""
+    part_number: "723"
+    model: "5D"
+    quantity: 1
+    location: Lab
+    specs:
+      type: "Programmable voltage regulator"
+    datasheet_url: ""
+    tags: [regulator, voltage]
+
+  - id: tc1044s
+    name: TC1044S charge pump
+    manufacturer: Microchip
+    part_number: TC1044S
+    model: ""
+    quantity: 3
+    location: Lab
+    specs:
+      type: "Switched capacitor voltage converter"
+    datasheet_url: https://www.microchip.com/en-us/product/TC1044S
+    tags: [charge pump, voltage converter]
+
+  - id: hn482764g
+    name: HN482764G
+    manufacturer: ""
+    part_number: HN482764G
+    model: ""
+    quantity: 2
+    location: Lab
+    specs: {}
+    datasheet_url: ""
+    tags: []

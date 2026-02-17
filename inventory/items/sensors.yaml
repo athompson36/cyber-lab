@@ -1,0 +1,122 @@
+# Sensors — Sensor modules and breakout boards
+# Schema: ../SCHEMA.md
+
+items:
+  - id: bme280_module
+    name: BME280 Temperature / Humidity / Pressure
+    manufacturer: Bosch
+    part_number: BME280
+    model: "I2C/SPI breakout"
+    quantity: 0
+    location: ""
+    specs:
+      interface: I2C
+      address_i2c: "0x76 or 0x77"
+      voltage_v: "3.3"
+      accuracy: "±1°C, ±3% RH, ±1 hPa"
+      range_temp: "-40–85°C"
+      resolution: "16-bit ADC"
+    datasheet_url: https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme280-ds002.pdf
+    notes: "Common for environmental nodes; 3.3V logic."
+    used_in: [env_sensor_array]
+    tags: [i2c, temp, humidity, pressure, 3.3v]
+
+  - id: dht22
+    name: DHT22 / AM2302 Temperature & Humidity
+    manufacturer: Aosong
+    part_number: AM2302
+    model: "DHT22"
+    quantity: 0
+    location: ""
+    specs:
+      interface: "1-wire digital"
+      voltage_v: "3.3–5"
+      accuracy: "±0.5°C, ±2–5% RH"
+      range_temp: "-40–80°C"
+      range_rh: "0–100%"
+    datasheet_url: https://www.sparkfun.com/datasheets/Sensors/Temperature/DHT22.pdf
+    used_in: [env_sensor_array]
+    tags: [digital, temp, humidity, 5v]
+
+  - id: sgp30
+    name: SGP30 VOC & eCO2
+    manufacturer: Sensirion
+    part_number: SGP30
+    model: "I2C air quality"
+    quantity: 0
+    location: ""
+    specs:
+      interface: I2C
+      address_i2c: "0x58"
+      voltage_v: "3.3"
+      metrics: "TVOC, eCO2"
+    datasheet_url: https://www.sensirion.com/en/environmental-sensors/gas-sensors/sgp30/
+    used_in: [env_sensor_array]
+    tags: [i2c, air_quality, voc, 3.3v]
+
+  - id: bh1750
+    name: BH1750 Ambient Light (Digital)
+    manufacturer: ROHM
+    part_number: BH1750FVI
+    model: "I2C light sensor"
+    quantity: 0
+    location: ""
+    specs:
+      interface: I2C
+      address_i2c: "0x23 or 0x5C"
+      voltage_v: "3.3–5"
+      range: "1–65535 lx"
+      resolution: "1 lx"
+    datasheet_url: https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf
+    used_in: [env_sensor_array]
+    tags: [i2c, light, 3.3v, 5v]
+
+  - id: mpu6050
+    name: MPU-6050 6-DOF IMU
+    manufacturer: InvenSense (TDK)
+    part_number: MPU-6050
+    model: "I2C accelerometer + gyro"
+    quantity: 0
+    location: ""
+    specs:
+      interface: I2C
+      address_i2c: "0x68 or 0x69"
+      voltage_v: "3–5"
+      axes: "3-axis accel, 3-axis gyro"
+    datasheet_url: https://invensense.tdk.com/products/motion-tracking/6-axis/mpu-6050/
+    used_in: []
+    tags: [i2c, imu, accel, gyro]
+
+  - id: kootek_gy52
+    name: Kootek Arduino GY-52 accelerometer stance tilt
+    manufacturer: Kootek
+    part_number: GY-52
+    model: "MPU-6050 breakout (stance/tilt)"
+    quantity: 1
+    location: Lab
+    specs:
+      interface: I2C
+      address_i2c: "0x68 or 0x69"
+      voltage_v: "3–5"
+      axes: "3-axis accel, 3-axis gyro"
+      application: "Stance, tilt, motion"
+    datasheet_url: ""
+    notes: "MPU-6050 based; Arduino-compatible breakout."
+    used_in: [midi_controller]
+    tags: [i2c, imu, accel, gyro, arduino]
+
+  - id: l76k_gnss
+    name: Quectel L76K GNSS (GPS/GLONASS/BeiDou)
+    manufacturer: Quectel
+    part_number: L76K
+    model: "UART GNSS module"
+    quantity: 0
+    location: "On T-Beam 1W"
+    specs:
+      interface: UART
+      baud: 9600
+      voltage_v: "2.7–3.6"
+      constellations: "GPS, GLONASS, BeiDou, Galileo"
+    datasheet_url: https://www.quectel.com/product/gnss-l76-k
+    used_in: [lora_mesh, t_beam_1w]
+    tags: [uart, gnss, gps]

@@ -1,0 +1,113 @@
+# SBCs — Single-board computers
+# Schema: ../SCHEMA.md
+
+items:
+  - id: raspberry_pi_4_4gb
+    name: Raspberry Pi 4 Model B 4GB
+    manufacturer: Raspberry Pi Foundation
+    part_number: ""
+    model: "4 Model B"
+    quantity: 1
+    location: Lab
+    notes: "Primary SBC for digital mixer and media player projects."
+    specs:
+      soc: BCM2711
+      ram_gb: 4
+      storage: "microSD"
+      interfaces: "2× USB 3.0, 2× USB 2.0, Gigabit Ethernet, 2× micro-HDMI, 40-pin GPIO, CSI, DSI"
+      power_v: 5
+      power_a: 3
+      gpio_pins: 40
+      wireless: "None (4 Model B); WiFi/BLE on 4 Model B with wireless"
+    datasheet_url: https://www.raspberrypi.com/documentation/computers/raspberry-pi-4.html
+    used_in: [digital_mixer, media_player_hybrid]
+    tags: [rpi, arm64, 40pin]
+
+  - id: raspberry_pi_5
+    name: Raspberry Pi 5
+    manufacturer: Raspberry Pi Foundation
+    model: "5 8GB"
+    quantity: 1
+    location: Lab
+    specs:
+      soc: BCM2712
+      ram_gb: 8
+      storage: "microSD, PCIe 2.0"
+      interfaces: "2× USB 3.0, 2× USB 2.0, Gigabit Ethernet, 2× micro-HDMI, 40-pin GPIO, RP1 I/O"
+      power_v: 5
+      power_a: 5
+      gpio_pins: 40
+      wireless: "Optional module"
+    datasheet_url: https://www.raspberrypi.com/documentation/computers/raspberry-pi-5.html
+    used_in: []
+    tags: [rpi, arm64, 40pin]
+
+  - id: raspberry_pi_zero_v1_3
+    name: Raspberry Pi Zero V1.3
+    manufacturer: Raspberry Pi Foundation
+    model: "Zero V1.3"
+    quantity: 2
+    location: Lab
+    specs:
+      soc: BCM2835
+      ram_mb: 512
+      storage: "microSD"
+      interfaces: "USB OTG, mini HDMI, 40-pin GPIO (unpopulated), CSI"
+      power_v: 5
+      gpio_pins: 40
+      wireless: "None (V1.3); V1.3 with WiFi available as separate variant"
+    datasheet_url: https://www.raspberrypi.com/documentation/computers/raspberry-pi-zero.html
+    used_in: []
+    tags: [rpi, arm, 40pin, compact]
+
+  - id: raspberry_pi_zero_2_w
+    name: Raspberry Pi Zero 2 W
+    manufacturer: Raspberry Pi Foundation
+    model: "Zero 2 W"
+    quantity: 0
+    location: ""
+    specs:
+      soc: BCM2710A1
+      ram_mb: 512
+      storage: "microSD"
+      interfaces: "USB OTG, mini HDMI, 40-pin GPIO (unpopulated), CSI"
+      power_v: 5
+      gpio_pins: 40
+      wireless: "WiFi, BLE"
+    datasheet_url: https://www.raspberrypi.com/documentation/computers/raspberry-pi-zero-2.html
+    used_in: []
+    tags: [rpi, arm64, 40pin, compact]
+
+  - id: pine64_rock64
+    name: PINE64 Rock64
+    manufacturer: PINE64
+    model: "Rock64 4GB"
+    quantity: 1
+    location: Lab
+    specs:
+      soc: RK3328
+      ram_gb: 4
+      storage: "eMMC optional, microSD"
+      interfaces: "USB 3.0, Gigabit Ethernet, HDMI, 40-pin GPIO (RPi-compatible)"
+      power_v: 5
+      gpio_pins: 40
+    datasheet_url: https://wiki.pine64.org/wiki/Rock64
+    used_in: []
+    tags: [pine64, arm64, 40pin]
+
+  - id: pine64_rockpro64
+    name: PINE64 RockPro64
+    manufacturer: PINE64
+    model: "RockPro64"
+    quantity: 1
+    location: Lab
+    specs:
+      soc: RK3399
+      ram_gb: 4
+      storage: "eMMC optional, microSD"
+      interfaces: "USB 3.0, USB-C, Gigabit Ethernet, HDMI, 40-pin GPIO, PCIe"
+      power_v: 5
+      gpio_pins: 40
+    datasheet_url: https://wiki.pine64.org/wiki/RockPro64
+    used_in: []
+    tags: [pine64, arm64, 40pin]

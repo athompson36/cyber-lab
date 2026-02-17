@@ -1,0 +1,2 @@
+# Store local datasheet PDFs here and reference in items/*.yaml as datasheet_file: "datasheets/filename.pdf"
+# Add large PDFs to .gitignore if you don't want them in the repo.

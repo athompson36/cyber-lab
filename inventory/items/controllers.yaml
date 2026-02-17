@@ -1,0 +1,159 @@
+# Controllers — MCU boards and dev kits
+# Schema: ../SCHEMA.md
+
+items:
+  - id: lilygo_t_beam_1w
+    name: LilyGO T-Beam 1W
+    manufacturer: LilyGO
+    model: "T-Beam 1W (ESP32-S3 + SX1262)"
+    quantity: 1
+    location: Lab
+    specs:
+      mcu: ESP32-S3
+      ram_mb: 512
+      psram_mb: 8
+      radio: "SX1262 LoRa, 1W PA, 868/915 MHz"
+      gnss: "L76K (UART 9600)"
+      display: "SH1106 OLED 128×64 I2C 0x3C"
+      pmu: "AXP2101 (I2C 0x34) on some variants"
+      power_v: "6.0–8.4 (2S LiPo), 5 (USB-C)"
+      gpio_pins: "Various; see devices/t_beam_1w"
+      wireless: "LoRa, BLE, WiFi"
+    datasheet_url: https://github.com/LilyGO/LilyGo-T-Beam
+    notes: "GPIO 40 must be HIGH before radio init. 22 dBm max TX; PA ramp ≥800 µs."
+    used_in: [lora_mesh, t_beam_1w]
+    tags: [esp32, lora, meshtastic, meshcore, 1w]
+
+  - id: esp32_devkit_c
+    name: ESP32 DevKit C
+    manufacturer: Espressif
+    model: "ESP32-WROOM-32 DevKit"
+    quantity: 0
+    location: ""
+    specs:
+      mcu: ESP32
+      ram_mb: 520
+      flash_mb: 4
+      interfaces: "USB-UART, 30+ GPIO, I2C, SPI, ADC, DAC"
+      power_v: 3.3
+      wireless: "WiFi, BLE"
+    datasheet_url: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html
+    used_in: [env_sensor_array, midi_controller]
+    tags: [esp32, wifi, ble]
+
+  - id: arduino_uno_r3
+    name: Arduino Uno R3
+    manufacturer: Arduino
+    model: "Uno R3"
+    quantity: 2
+    location: Lab
+    specs:
+      mcu: ATmega328P
+      ram_kb: 2
+      flash_kb: 32
+      interfaces: "14 digital I/O, 6 PWM, 6 ADC, UART, I2C, SPI"
+      power_v: 5
+      power_a: 0.05
+      gpio_pins: 14
+    datasheet_url: https://docs.arduino.cc/hardware/uno-rev3
+    used_in: []
+    tags: [arduino, avr, 5v]
+
+  - id: teensy_4_0
+    name: Teensy 4.0
+    manufacturer: PJRC
+    model: "4.0"
+    quantity: 0
+    location: ""
+    specs:
+      mcu: "i.MX RT1062 (ARM Cortex-M7 600 MHz)"
+      ram_mb: 1
+      flash_mb: 2
+      interfaces: "USB, 40+ GPIO, I2C, SPI, UART, ADC, DAC, PWM"
+      power_v: "3.3 (from USB 5V)"
+      gpio_pins: 40
+    datasheet_url: https://www.pjrc.com/store/teensy40.html
+    notes: "Used in Maschine MK2 mod and MIDI controller concepts."
+    used_in: [maschine_mk2_mod, midi_controller]
+    tags: [teensy, arm, midi, 3.3v]
+
+  - id: teensy_3_2
+    name: Teensy 3.2
+    manufacturer: PJRC
+    model: "3.2"
+    quantity: 1
+    location: Lab
+    specs:
+      mcu: "MK20DX256 (ARM Cortex-M4 72 MHz)"
+      ram_kb: 64
+      flash_kb: 256
+      interfaces: "USB, 34 GPIO, I2C, SPI, UART, ADC"
+      power_v: "3.3"
+      gpio_pins: 34
+    datasheet_url: https://www.pjrc.com/store/teensy32.html
+    used_in: []
+    tags: [teensy, arm, 3.3v]
+
+  - id: teensy_4_1
+    name: Teensy 4.1
+    manufacturer: PJRC
+    model: "4.1"
+    quantity: 1
+    location: Lab
+    specs:
+      mcu: "i.MX RT1062 (ARM Cortex-M7 600 MHz)"
+      ram_mb: 1
+      flash_mb: 8
+      interfaces: "USB, Ethernet, 40+ GPIO, I2C, SPI, UART, ADC, DAC, PWM, SD card slot"
+      power_v: "3.3 (from USB 5V)"
+      gpio_pins: 55
+      wireless: "Optional (add-on)"
+    datasheet_url: https://www.pjrc.com/store/teensy41.html
+    notes: "Larger form factor than 4.0; built-in Ethernet and SD."
+    used_in: [maschine_mk2_mod, midi_controller]
+    tags: [teensy, arm, midi, ethernet, 3.3v]
+
+  - id: teensy_4_1_breakout
+    name: Teensy 4.1 breakout board module
+    manufacturer: ""
+    model: "4.1 breakout"
+    quantity: 1
+    location: Lab
+    specs:
+      compatible: Teensy 4.1
+      interfaces: "Breadboard-friendly GPIO breakout"
+    datasheet_url: ""
+    used_in: []
+    tags: [teensy, breakout]
+
+  - id: teensy_audio_shield_rev_d
+    name: Teensy Audio Shield Rev D
+    manufacturer: PJRC
+    model: "Audio Shield Rev D"
+    quantity: 1
+    location: Lab
+    specs:
+      compatible: "Teensy 3.2, 3.5, 3.6, 4.0, 4.1"
+      codec: SGTL5000
+      interfaces: "Line in/out, headphone, I2S, S/PDIF"
+    datasheet_url: https://www.pjrc.com/store/teensy3_audio.html
+    used_in: [digital_mixer, midi_controller]
+    tags: [teensy, audio, sgtl5000]
+
+  - id: onion_omega2_plus
+    name: Onion Omega2+
+    manufacturer: Onion
+    model: "Omega2+"
+    quantity: 1
+    location: Lab
+    specs:
+      soc: "MediaTek MT7688 (MIPS 580 MHz)"
+      ram_mb: 128
+      storage_mb: 32
+      interfaces: "USB, 15 GPIO, I2C, SPI, UART"
+      power_v: 5
+      wireless: "WiFi 2.4 GHz"
+    datasheet_url: https://docs.onion.io/omega2-docs/
+    notes: "Linux SBC; compact IoT board."
+    used_in: []
+    tags: [sbc, wifi, mips, iot]

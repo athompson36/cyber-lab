@@ -51,6 +51,7 @@ esptool --chip esp32s3 --port /dev/cu.usbmodem* write_flash 0x0 path/to/firmware
 | [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) | Lab and device roadmap, priorities. |
 | [REPOS.md](REPOS.md) | Repo index (Meshtastic, MeshCore, Launcher, etc.). |
 | [current_project.md](current_project.md) | ESP32 & SBC project list and lab context. |
+| [inventory/README.md](inventory/README.md) | Hardware catalog: SBCs, controllers, sensors, accessories, components (specs + datasheets). |
 
 ---
 

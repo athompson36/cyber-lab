@@ -6,14 +6,14 @@ This folder holds **configuration examples** for the T-Beam 1W:
 - **Channel or mesh configs** — export/import for MeshCore or Meshtastic.
 - **Device-specific defaults** — battery limits, display, GPS baud, etc.
 
-## Structure (suggested)
+## Structure
 
 ```
 configs/
 ├── meshcore/
-│   ├── repeater_example.env    # Build-flags style defaults for repeater
-│   ├── room_server_example.env
-│   └── companion_example.env
+│   ├── companion_example.env   # Companion (BLE) — ADVERT_NAME, ADMIN_PASSWORD
+│   ├── repeater_example.env    # Repeater — ADVERT_NAME, ADMIN_PASSWORD
+│   └── room_server_example.env # Room Server — ADVERT_NAME, ADMIN_PASSWORD, ROOM_PASSWORD
 ├── meshtastic/
 │   └── (future: protobuf or config exports)
 └── README.md                  # This file

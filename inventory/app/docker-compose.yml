@@ -1,0 +1,21 @@
+# Run inventory web app + AI tools in Docker.
+# From repo root: docker compose -f inventory/app/docker-compose.yml up --build
+# Then open http://127.0.0.1:5050
+
+services:
+  inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5050"
+    environment:
+      - REPO_ROOT=/workspace
+      - PORT=5050
+      - FLASK_DEBUG=0
+      # Optional: for AI natural-language answers and update summaries
+      # - OPENAI_API_KEY=sk-...
+    volumes:
+      # Mount whole repo: read inventory.db, YAML; write project proposals to artifacts/project_proposals
+      - ../..:/workspace
+    restart: "no"

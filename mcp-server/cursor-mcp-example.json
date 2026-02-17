@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "esp32-lab": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/esp32/mcp-server/dist/index.js"],
+      "cwd": "/ABSOLUTE/PATH/TO/esp32",
+      "env": {
+        "ESP32_LAB_REPO_ROOT": "/ABSOLUTE/PATH/TO/esp32"
+      }
+    }
+  }
+}
