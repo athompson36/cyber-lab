@@ -66,6 +66,12 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 | L13 | Top-level `scripts/` for build/flash/validate | 🟡 Partial | Build/flash scripts exist under meshtastic-tbeam-1w-firmware; generalize for lab |
 | L14 | Toolchain detection by presence of `platformio.ini`, `idf.py`, `Cargo.toml`, etc. | 🔴 Not started | Cursor/orchestrator must detect before suggesting commands |
 
+### 2.5 Mobile / Companion Webapp
+
+| ID | Feature | Status | Notes |
+|----|---------|--------|--------|
+| L15 | Webapp for iOS / iPadOS / Android | 🔴 Planned | PWA or native wrapper: inventory search, AI query, project planning, Docker/device status; responsive layout and installable on mobile |
+
 ---
 
 ## 3. T-Beam 1W — MeshCore (Current Implementation)
@@ -228,6 +234,7 @@ Items from MeshCore README “Road-Map / To-Do” that affect this lab or T-Beam
 ### P4 — Future
 
 - L6–L8 containers, L11 OTA, G8 changelog.
+- **L15** Webapp for iOS / iPadOS / Android (PWA or native wrapper: inventory, project planning, device status on mobile).
 - MeshCore roadmap items MC1–MC7 as upstream lands.
 - Additional devices (e.g. Heltec, T-Deck Plus) per CONTEXT.md.
 

@@ -95,6 +95,7 @@
 | 5.2 | OTA staging layout under `ota/` | L11 | ⬜ |
 | 5.3 | Changelog or release notes for versioned artifacts | G8 | ⬜ |
 | 5.4 | Track MeshCore upstream roadmap (MC1–MC7); update overlays as needed | §5 | ⬜ |
+| 5.5 | Webapp for iOS / iPadOS / Android (PWA or wrapper: inventory, project planning, status) | L15 | ⬜ |
 
 ---
 

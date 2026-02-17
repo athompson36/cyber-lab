@@ -46,7 +46,7 @@
 | Doc | Use when |
 |-----|----------|
 | [CONTEXT.md](CONTEXT.md) | Understanding lab rules, device contract, containers. |
-| [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) | Full backlog and roadmap items (L1–G11, T1–MC7). |
+| [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) | Full backlog and roadmap items (L1–L15, G1–G11, T1–MC7). |
 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | Phased task list; what to do in order. |
 | **PROJECT_CONTEXT.md** (this file) | Current phase, next actions, how to stay on task. |
 | [current_project.md](current_project.md) | ESP32/SBC project ideas and lab context links. |
