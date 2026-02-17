@@ -14,14 +14,14 @@
   const TAB_STORAGE_KEY = "inventory-app-tab";
 
   function switchTab(tabId) {
-    const panels = document.querySelectorAll(".tab-panel");
-    const buttons = document.querySelectorAll(".tab-btn");
+    const panels = document.querySelectorAll(".tab-panels .tab-panel");
+    const buttons = document.querySelectorAll(".tabs .tab-btn");
     const targetPanel = document.getElementById("panel-" + tabId);
     const targetBtn = document.getElementById("tab-btn-" + tabId);
     if (!targetPanel || !targetBtn) return;
     panels.forEach((p) => {
       p.classList.remove("active");
-      p.hidden = true;
+      p.setAttribute("hidden", "");
       p.setAttribute("aria-hidden", "true");
     });
     buttons.forEach((b) => {
@@ -29,22 +29,35 @@
       b.setAttribute("aria-selected", "false");
     });
     targetPanel.classList.add("active");
-    targetPanel.hidden = false;
+    targetPanel.removeAttribute("hidden");
     targetPanel.setAttribute("aria-hidden", "false");
     targetBtn.classList.add("active");
     targetBtn.setAttribute("aria-selected", "true");
     try { sessionStorage.setItem(TAB_STORAGE_KEY, tabId); } catch (e) {}
   }
 
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-  });
+  function initTabs() {
+    const btns = document.querySelectorAll(".tabs .tab-btn");
+    btns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tabId = btn.getAttribute("data-tab");
+        if (tabId) switchTab(tabId);
+      });
+    });
+    const savedTab = (function () {
+      try { return sessionStorage.getItem(TAB_STORAGE_KEY); } catch (e) { return null; }
+    })();
+    if (savedTab && document.getElementById("panel-" + savedTab)) {
+      switchTab(savedTab);
+    } else {
+      switchTab("search");
+    }
+  }
 
-  const savedTab = (function () {
-    try { return sessionStorage.getItem(TAB_STORAGE_KEY); } catch (e) { return null; }
-  })();
-  if (savedTab && document.getElementById("panel-" + savedTab)) {
-    switchTab(savedTab);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initTabs);
+  } else {
+    initTabs();
   }
 
   function loadCategories() {
@@ -300,6 +313,50 @@
   }
 
   document.getElementById("btn-settings-save")?.addEventListener("click", saveAiSettings);
+
+  function loadPathSettings() {
+    fetch("/api/settings/paths")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        const set = (id, v) => {
+          const el = document.getElementById(id);
+          if (el) el.value = v ?? "";
+        };
+        set("settings-docker-container", data.docker_container);
+        set("settings-frontend-path", data.frontend_path);
+        set("settings-backend-path", data.backend_path);
+        set("settings-database-path", data.database_path);
+        set("settings-mcp-server-path", data.mcp_server_path);
+      })
+      .catch(() => {});
+  }
+
+  function savePathSettings() {
+    const statusEl = document.getElementById("settings-paths-save-status");
+    const payload = {
+      docker_container: (document.getElementById("settings-docker-container")?.value ?? "").trim(),
+      frontend_path: (document.getElementById("settings-frontend-path")?.value ?? "").trim(),
+      backend_path: (document.getElementById("settings-backend-path")?.value ?? "").trim(),
+      database_path: (document.getElementById("settings-database-path")?.value ?? "").trim(),
+      mcp_server_path: (document.getElementById("settings-mcp-server-path")?.value ?? "").trim(),
+    };
+    fetch("/api/settings/paths", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (statusEl) { statusEl.textContent = "Saved."; statusEl.className = "flash-status flash-ok"; }
+      })
+      .catch((err) => {
+        if (statusEl) { statusEl.textContent = "Error: " + err.message; statusEl.className = "flash-status flash-error"; }
+      });
+  }
+
+  document.getElementById("btn-settings-paths-save")?.addEventListener("click", savePathSettings);
 
   closeDetail.addEventListener("click", () => (detailPanel.hidden = true));
   btnSearch.addEventListener("click", runSearch);
@@ -600,6 +657,7 @@
   let currentProjectId = "";
   let currentBom = [];
   let currentMessages = [];
+  let currentDesign = { pin_outs: [], wiring: [], schematic: "", enclosure: "" };
 
   function loadProjectsList() {
     const sel = document.getElementById("project-select");
@@ -647,6 +705,47 @@
     el.scrollTop = el.scrollHeight;
   }
 
+  function renderDesign(design) {
+    const d = design || currentDesign;
+    const pinoutTbody = document.getElementById("project-pinout-tbody");
+    if (pinoutTbody) {
+      const rows = d.pin_outs || [];
+      pinoutTbody.innerHTML = rows
+        .map((r) => "<tr><td>" + escapeHtml(r.pin || "—") + "</td><td>" + escapeHtml(r.function || "—") + "</td><td>" + escapeHtml(r.notes || "—") + "</td></tr>")
+        .join("");
+    }
+    const wiringTbody = document.getElementById("project-wiring-tbody");
+    if (wiringTbody) {
+      const rows = d.wiring || [];
+      wiringTbody.innerHTML = rows
+        .map((r) => "<tr><td>" + escapeHtml(r.from || "—") + "</td><td>" + escapeHtml(r.to || "—") + "</td><td>" + escapeHtml(r.net || "—") + "</td></tr>")
+        .join("");
+    }
+    const schematicEl = document.getElementById("project-schematic-text");
+    if (schematicEl) schematicEl.textContent = d.schematic || "";
+    const enclosureEl = document.getElementById("project-enclosure-text");
+    if (enclosureEl) enclosureEl.textContent = d.enclosure || "";
+  }
+
+  function setProjectExportLinks(projectId) {
+    if (!projectId) {
+      ["btn-export-pinout", "btn-export-wiring", "btn-export-schematic", "btn-export-enclosure"].forEach((id) => {
+        const a = document.getElementById(id);
+        if (a) a.href = "#";
+      });
+      return;
+    }
+    const base = "/api/projects/" + encodeURIComponent(projectId) + "/export/";
+    const pinout = document.getElementById("btn-export-pinout");
+    if (pinout) pinout.href = base + "pinout";
+    const wiring = document.getElementById("btn-export-wiring");
+    if (wiring) wiring.href = base + "wiring";
+    const schematic = document.getElementById("btn-export-schematic");
+    if (schematic) schematic.href = base + "schematic";
+    const enclosure = document.getElementById("btn-export-enclosure");
+    if (enclosure) enclosure.href = base + "enclosure";
+  }
+
   function openProject(projectId) {
     currentProjectId = projectId || "";
     const titleEl = document.getElementById("project-title");
@@ -658,10 +757,13 @@
       if (descEl) descEl.value = "";
       currentMessages = [];
       currentBom = [];
+      currentDesign = { pin_outs: [], wiring: [], schematic: "", enclosure: "" };
       renderProjectMessages([]);
       renderBom([]);
+      renderDesign(currentDesign);
       if (digiLink) digiLink.href = "#";
       if (mouserLink) mouserLink.href = "#";
+      setProjectExportLinks("");
       return;
     }
     fetch("/api/projects/" + encodeURIComponent(projectId))
@@ -674,16 +776,26 @@
         if (descEl) descEl.value = proj.description || "";
         currentMessages = proj.conversation || [];
         currentBom = proj.parts_bom || [];
+        currentDesign = {
+          pin_outs: proj.pin_outs || [],
+          wiring: proj.wiring || [],
+          schematic: proj.schematic || "",
+          enclosure: proj.enclosure || "",
+        };
         renderProjectMessages(currentMessages);
         renderBom(currentBom);
+        renderDesign(currentDesign);
         if (digiLink) digiLink.href = "/api/projects/" + encodeURIComponent(projectId) + "/bom/digikey";
         if (mouserLink) mouserLink.href = "/api/projects/" + encodeURIComponent(projectId) + "/bom/mouser";
+        setProjectExportLinks(projectId);
       })
       .catch(() => {
         currentMessages = [];
         currentBom = [];
+        currentDesign = { pin_outs: [], wiring: [], schematic: "", enclosure: "" };
         renderProjectMessages([]);
         renderBom([]);
+        renderDesign(currentDesign);
       });
   }
 
@@ -720,6 +832,7 @@
         let buffer = "";
         let fullReply = "";
         let suggestedBom = [];
+        let suggestedDesign = null;
         function pump() {
           return reader.read().then(({ done, value }) => {
             if (value) {
@@ -736,6 +849,7 @@
                       if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
                     }
                     if (data.done && data.suggested_bom) suggestedBom = data.suggested_bom;
+                    if (data.done && data.suggested_design) suggestedDesign = data.suggested_design;
                   } catch (e) { /* skip */ }
                 }
               }
@@ -749,12 +863,22 @@
                   if (streamDiv) streamDiv.appendChild(document.createTextNode(data.delta));
                 }
                 if (data.done && data.suggested_bom) suggestedBom = data.suggested_bom || [];
+                if (data.done && data.suggested_design) suggestedDesign = data.suggested_design;
               } catch (e) { /* skip */ }
             }
             currentMessages[currentMessages.length - 1].content = fullReply;
             if (suggestedBom.length) {
               currentBom = suggestedBom;
               renderBom(currentBom);
+            }
+            if (suggestedDesign && (suggestedDesign.pin_outs?.length || suggestedDesign.wiring?.length || suggestedDesign.schematic || suggestedDesign.enclosure)) {
+              currentDesign = {
+                pin_outs: suggestedDesign.pin_outs || [],
+                wiring: suggestedDesign.wiring || [],
+                schematic: suggestedDesign.schematic || "",
+                enclosure: suggestedDesign.enclosure || "",
+              };
+              renderDesign(currentDesign);
             }
           });
         }
@@ -796,7 +920,16 @@
     const description = (document.getElementById("project-description")?.value || "").trim();
     const statusEl = document.getElementById("project-save-status");
     const parts_bom = currentBom.map((r) => ({ name: r.name, part_number: r.part_number || "", quantity: r.quantity ?? 0 }));
-    const payload = { title: title || "Untitled project", description, parts_bom, conversation: currentMessages };
+    const payload = {
+      title: title || "Untitled project",
+      description,
+      parts_bom,
+      conversation: currentMessages,
+      pin_outs: currentDesign.pin_outs,
+      wiring: currentDesign.wiring,
+      schematic: currentDesign.schematic,
+      enclosure: currentDesign.enclosure,
+    };
     if (currentProjectId) {
       fetch("/api/projects/" + encodeURIComponent(currentProjectId), {
         method: "PUT",
@@ -829,6 +962,7 @@
           const mouserLink = document.getElementById("btn-bom-mouser");
           if (digiLink) digiLink.href = "/api/projects/" + encodeURIComponent(currentProjectId) + "/bom/digikey";
           if (mouserLink) mouserLink.href = "/api/projects/" + encodeURIComponent(currentProjectId) + "/bom/mouser";
+          setProjectExportLinks(currentProjectId);
         })
         .catch((err) => {
           if (statusEl) { statusEl.textContent = "Error: " + err.message; statusEl.className = "flash-status flash-error"; }
@@ -839,6 +973,7 @@
   loadCategories();
   fetchItems();
   loadAiSettings();
+  loadPathSettings();
   loadDockerStatus();
   loadDockerContainers();
   loadFlashPorts();

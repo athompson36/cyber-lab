@@ -12,6 +12,9 @@ ARTIFACTS_DIR = os.path.join(REPO_ROOT, "artifacts")
 # AI settings file (persisted in artifacts; env OPENAI_API_KEY overrides file)
 AI_SETTINGS_PATH = os.path.join(ARTIFACTS_DIR, "ai_settings.json")
 
+# Path settings (docker container, frontend, backend, database, MCP server) - persisted in artifacts
+PATH_SETTINGS_PATH = os.path.join(ARTIFACTS_DIR, "path_settings.json")
+
 # Optional: set OPENAI_API_KEY for AI (env takes precedence over file)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
@@ -66,6 +69,71 @@ def get_ai_settings_public():
         "model": get_openai_model(),
         "base_url": get_openai_base_url(),
     }
+
+
+def _load_path_settings_file():
+    """Read path settings from file. Returns dict with docker_container, frontend_path, backend_path, database_path, mcp_server_path."""
+    path = PATH_SETTINGS_PATH
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def get_path_settings_defaults():
+    """Default path values (used when not set in file)."""
+    mcp_default = os.path.join(REPO_ROOT, "mcp-server")
+    if not os.path.isdir(mcp_default):
+        mcp_default = REPO_ROOT
+    return {
+        "docker_container": "",
+        "frontend_path": REPO_ROOT,
+        "backend_path": BASE_DIR,
+        "database_path": DB_PATH,
+        "mcp_server_path": mcp_default,
+    }
+
+
+def get_path_settings():
+    """Return path settings for UI: each key with effective value (default or override)."""
+    defaults = get_path_settings_defaults()
+    overrides = _load_path_settings_file()
+    return {
+        "docker_container": (overrides.get("docker_container") or "").strip() or defaults["docker_container"],
+        "frontend_path": (overrides.get("frontend_path") or "").strip() or defaults["frontend_path"],
+        "backend_path": (overrides.get("backend_path") or "").strip() or defaults["backend_path"],
+        "database_path": (overrides.get("database_path") or "").strip() or defaults["database_path"],
+        "mcp_server_path": (overrides.get("mcp_server_path") or "").strip() or defaults["mcp_server_path"],
+    }
+
+
+def save_path_settings(docker_container=None, frontend_path=None, backend_path=None, database_path=None, mcp_server_path=None):
+    """Update and persist path settings. Pass None to leave unchanged."""
+    os.makedirs(os.path.dirname(PATH_SETTINGS_PATH), exist_ok=True)
+    current = _load_path_settings_file()
+    if docker_container is not None:
+        current["docker_container"] = (docker_container or "").strip()
+    if frontend_path is not None:
+        current["frontend_path"] = (frontend_path or "").strip()
+    if backend_path is not None:
+        current["backend_path"] = (backend_path or "").strip()
+    if database_path is not None:
+        current["database_path"] = (database_path or "").strip()
+    if mcp_server_path is not None:
+        current["mcp_server_path"] = (mcp_server_path or "").strip()
+    with open(PATH_SETTINGS_PATH, "w", encoding="utf-8") as f:
+        json.dump(current, f, indent=2)
+    return get_path_settings()
+
+
+def get_database_path():
+    """Database path: override from path_settings if set, else default DB_PATH."""
+    overrides = _load_path_settings_file()
+    path = (overrides.get("database_path") or "").strip()
+    return path or DB_PATH
 
 # GitHub repos to check for firmware/OS updates (owner/repo)
 FIRMWARE_REPOS_FOR_UPDATES = [

@@ -79,7 +79,7 @@ body {
   display: none;
 }
 .tab-panel.active {
-  display: block;
+  display: block !important;
 }
 .tab-panel[hidden] {
   display: none !important;
@@ -185,6 +185,12 @@ button:hover {
 }
 .ai-answer.has-content {
   color: var(--text);
+}
+
+.settings-section.settings-paths-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
 }
 
 .settings-section {
@@ -654,6 +660,70 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.project-hardware {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.project-hardware h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.project-hardware-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 640px) {
+  .project-hardware-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.project-hardware-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+.project-hardware-block h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.project-hardware-block.project-hardware-full {
+  grid-column: 1 / -1;
+}
+.project-hardware-actions {
+  margin-bottom: 0.5rem;
+}
+.project-hardware-actions .btn-link {
+  padding: 0.3rem 0.5rem;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+.project-hardware-actions .btn-link:hover {
+  background: var(--border);
+}
+.project-notes-pre {
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 4px;
+  color: var(--text-muted);
 }
 
 .results-header {

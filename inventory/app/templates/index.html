@@ -54,6 +54,36 @@
     </div>
     <span id="settings-save-status" class="flash-status"></span>
   </section>
+  <section class="settings-section settings-paths-section" id="settings-paths-section">
+    <div class="settings-heading-row">
+      <h2 class="settings-heading">Paths</h2>
+      <button type="button" id="btn-settings-paths-save" class="btn-refresh">Save paths</button>
+    </div>
+    <p class="settings-note">Paths for Docker container (name or ID), frontend, backend, database, and MCP server. Stored under <code>artifacts/path_settings.json</code>. Database path is used on next app start.</p>
+    <div class="settings-fields">
+      <div class="settings-row">
+        <label for="settings-docker-container">Docker container</label>
+        <input type="text" id="settings-docker-container" placeholder="Container name or ID (e.g. esp32-lab-mcp)" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-frontend-path">Frontend path</label>
+        <input type="text" id="settings-frontend-path" placeholder="Path to frontend app" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-backend-path">Backend path</label>
+        <input type="text" id="settings-backend-path" placeholder="Path to backend app" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-database-path">Database path</label>
+        <input type="text" id="settings-database-path" placeholder="Path to inventory database" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="settings-mcp-server-path">MCP server path</label>
+        <input type="text" id="settings-mcp-server-path" placeholder="Path to MCP server (e.g. mcp-server dir)" autocomplete="off">
+      </div>
+    </div>
+    <span id="settings-paths-save-status" class="flash-status"></span>
+  </section>
   </section>
 
   <section class="tab-panel" id="panel-docker" role="tabpanel" aria-labelledby="tab-btn-docker" hidden>
@@ -151,7 +181,7 @@
       <h2 class="projects-heading">Project planning</h2>
       <button type="button" id="btn-project-new" class="btn-refresh">New project</button>
     </div>
-    <p class="projects-note">Develop an idea with the AI; it will check your inventory and suggest a parts BOM. Export for Digi-Key (primary) or Mouser (backup). Proposals are saved in the Docker container.</p>
+    <p class="projects-note">Develop an idea with the AI; it will suggest a BOM and, for circuits, pinouts, wiring, schematic notes, and enclosure/CAD notes. Export BOM for Digi-Key or Mouser; export pinout/wiring as CSV and schematic/enclosure as markdown for PCBs and 3D printing.</p>
     <div class="projects-controls">
       <div class="projects-row">
         <label for="project-select">Saved project</label>
@@ -193,6 +223,49 @@
               </thead>
               <tbody id="project-bom-tbody"></tbody>
             </table>
+          </div>
+        </div>
+        <div class="project-hardware" id="project-hardware">
+          <h3>Hardware design (pinouts, wiring, schematic, enclosure)</h3>
+          <div class="project-hardware-grid">
+            <div class="project-hardware-block">
+              <h4>Pin out</h4>
+              <div class="project-hardware-actions">
+                <a id="btn-export-pinout" href="#" class="btn-link" download="pinout.csv">Export CSV</a>
+              </div>
+              <div class="project-bom-table-wrap">
+                <table class="project-bom-table" id="project-pinout-table">
+                  <thead><tr><th>Pin</th><th>Function</th><th>Notes</th></tr></thead>
+                  <tbody id="project-pinout-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="project-hardware-block">
+              <h4>Wiring / netlist</h4>
+              <div class="project-hardware-actions">
+                <a id="btn-export-wiring" href="#" class="btn-link" download="wiring.csv">Export CSV</a>
+              </div>
+              <div class="project-bom-table-wrap">
+                <table class="project-bom-table" id="project-wiring-table">
+                  <thead><tr><th>From</th><th>To</th><th>Net</th></tr></thead>
+                  <tbody id="project-wiring-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="project-hardware-block project-hardware-full">
+              <h4>Schematic notes</h4>
+              <div class="project-hardware-actions">
+                <a id="btn-export-schematic" href="#" class="btn-link" download="schematic.md">Export .md</a>
+              </div>
+              <pre id="project-schematic-text" class="project-notes-pre"></pre>
+            </div>
+            <div class="project-hardware-block project-hardware-full">
+              <h4>Enclosure / CAD (3D print)</h4>
+              <div class="project-hardware-actions">
+                <a id="btn-export-enclosure" href="#" class="btn-link" download="enclosure.md">Export .md</a>
+              </div>
+              <pre id="project-enclosure-text" class="project-notes-pre"></pre>
+            </div>
           </div>
         </div>
         <div class="project-save-row">

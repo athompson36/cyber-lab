@@ -23,12 +23,14 @@ from config import (
     ARTIFACTS_DIR,
     BACKUPS_DIR,
     BUILD_CONFIG,
-    DB_PATH,
     get_ai_settings_public,
+    get_database_path,
     get_openai_api_key,
     get_openai_base_url,
     get_openai_model,
     save_ai_settings,
+    get_path_settings,
+    save_path_settings,
 )
 from updates import get_updates
 from flash_ops import (
@@ -48,13 +50,25 @@ from project_ops import (
     save_proposal,
 )
 
+PROJECT_PLANNING_SYSTEM = (
+    "You are a project planning assistant for electronics/hardware projects. "
+    "The user has an inventory list below; use it to suggest parts they might already have or need to buy. "
+    "Help them develop their idea into a concrete plan. "
+    "When you suggest specific parts, end your reply with a line starting exactly with 'BOM:' followed by a JSON array of objects, each with keys: name (string), part_number (string, optional), quantity (integer). "
+    "Example: BOM: [{\"name\": \"ESP32 DevKit C\", \"part_number\": \"\", \"quantity\": 2}, {\"name\": \"10k resistor\", \"part_number\": \"\", \"quantity\": 10}] "
+    "When the project involves a circuit or PCB, also output a DESIGN block for pinouts, wiring, schematic, and enclosure. "
+    "Use exactly: DESIGN: then a single JSON object with keys: pin_outs (array of {pin, function, notes}), wiring (array of {from, to, net}), schematic (string: markdown description or block diagram notes for a schematic), enclosure (string: markdown notes for 3D-printed enclosure, dimensions and mounting). "
+    "Example: DESIGN: {\"pin_outs\": [{\"pin\": \"GPIO21\", \"function\": \"I2C SDA\", \"notes\": \"\"}], \"wiring\": [{\"from\": \"ESP32.GPIO21\", \"to\": \"OLED.SDA\", \"net\": \"I2C_SDA\"}], \"schematic\": \"ESP32 I2C to OLED...\", \"enclosure\": \"Box 80x60x30mm, cutouts for USB and display.\"}"
+)
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 
 def get_db():
-    if not os.path.isfile(DB_PATH):
+    db_path = get_database_path()
+    if not os.path.isfile(db_path):
         return None
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -96,6 +110,32 @@ def api_settings_ai_post():
     try:
         save_ai_settings(api_key=api_key, model=model, base_url=base_url)
         return jsonify(get_ai_settings_public())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/paths", methods=["GET"])
+def api_settings_paths_get():
+    """Return path settings for UI: docker_container, frontend_path, backend_path, database_path, mcp_server_path."""
+    try:
+        return jsonify(get_path_settings())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/paths", methods=["POST"])
+def api_settings_paths_post():
+    """Update path settings. Body: docker_container, frontend_path, backend_path, database_path, mcp_server_path (all optional)."""
+    data = request.get_json() or {}
+    try:
+        save_path_settings(
+            docker_container=data.get("docker_container"),
+            frontend_path=data.get("frontend_path"),
+            backend_path=data.get("backend_path"),
+            database_path=data.get("database_path"),
+            mcp_server_path=data.get("mcp_server_path"),
+        )
+        return jsonify(get_path_settings())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -746,7 +786,8 @@ def api_projects_update(proposal_id):
     if existing is None:
         return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
-    for key in ("title", "description", "idea_summary", "parts_bom", "conversation", "conversation_summary"):
+    for key in ("title", "description", "idea_summary", "parts_bom", "conversation", "conversation_summary",
+                "pin_outs", "wiring", "schematic", "enclosure"):
         if key in data:
             existing[key] = data[key]
     existing["id"] = proposal_id
@@ -795,6 +836,74 @@ def _parse_bom_from_ai_text(text):
     return []
 
 
+def _parse_design_from_ai_text(text):
+    """Extract hardware design from AI reply: pin_outs, wiring, schematic, enclosure.
+    Looks for DESIGN: { ... } JSON, or PINOUTS:/WIRING:/SCHEMATIC:/ENCLOSURE: sections."""
+    out = {"pin_outs": [], "wiring": [], "schematic": "", "enclosure": ""}
+    if not text:
+        return out
+    # Try DESIGN: { ... } single JSON object
+    idx = text.upper().find("DESIGN:")
+    if idx >= 0:
+        start = text.find("{", idx)
+        if start >= 0:
+            depth = 1
+            i = start + 1
+            while i < len(text) and depth > 0:
+                c = text[i]
+                if c == "[" or c == "{":
+                    depth += 1
+                elif c == "]" or c == "}":
+                    depth -= 1
+                elif c == '"' and depth > 0:
+                    i += 1
+                    while i < len(text) and (text[i] != '"' or text[i - 1] == "\\"):
+                        i += 1
+                i += 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[start:i])
+                    out["pin_outs"] = obj.get("pin_outs") if isinstance(obj.get("pin_outs"), list) else out["pin_outs"]
+                    out["wiring"] = obj.get("wiring") if isinstance(obj.get("wiring"), list) else out["wiring"]
+                    if isinstance(obj.get("schematic"), str):
+                        out["schematic"] = obj["schematic"].strip()
+                    if isinstance(obj.get("enclosure"), str):
+                        out["enclosure"] = obj["enclosure"].strip()
+                    return out
+                except json.JSONDecodeError:
+                    pass
+    # Section markers (optional fallback)
+    for marker, key in [("PINOUTS:", "pin_outs"), ("WIRING:", "wiring")]:
+        i = text.upper().find(marker)
+        if i >= 0:
+            start = text.find("[", i)
+            if start >= 0:
+                depth = 1
+                j = start + 1
+                while j < len(text) and depth > 0:
+                    c = text[j]
+                    if c in "[{": depth += 1
+                    elif c in "]}": depth -= 1
+                    j += 1
+                if depth == 0:
+                    try:
+                        out[key] = json.loads(text[start:j])
+                    except json.JSONDecodeError:
+                        pass
+    for marker, key in [("SCHEMATIC:", "schematic"), ("ENCLOSURE:", "enclosure")]:
+        i = text.upper().find(marker)
+        if i >= 0:
+            end = len(text)
+            for other in ["DESIGN:", "BOM:", "PINOUTS:", "WIRING:", "SCHEMATIC:", "ENCLOSURE:"]:
+                if other == marker:
+                    continue
+                j = text.upper().find(other, i + len(marker))
+                if 0 <= j < end:
+                    end = j
+            out[key] = text[i + len(marker):end].strip()
+    return out
+
+
 @app.route("/api/projects/ai", methods=["POST"])
 def api_projects_ai():
     """Chat for project planning: develop idea with AI, get suggested BOM checked against inventory."""
@@ -837,13 +946,7 @@ def api_projects_ai():
                 )
             existing_bom = proj.get("parts_bom") or []
 
-    system = (
-        "You are a project planning assistant for electronics/hardware projects. "
-        "The user has an inventory list below; use it to suggest parts they might already have or need to buy. "
-        "Help them develop their idea into a concrete plan. "
-        "When you suggest specific parts, end your reply with a line starting exactly with 'BOM:' followed by a JSON array of objects, each with keys: name (string), part_number (string, optional), quantity (integer). "
-        "Example: BOM: [{\"name\": \"ESP32 DevKit C\", \"part_number\": \"\", \"quantity\": 2}, {\"name\": \"10k resistor\", \"part_number\": \"\", \"quantity\": 10}]"
-    )
+    system = PROJECT_PLANNING_SYSTEM
     user_content = f"Inventory (id, name, part_number, category, qty):\n{inventory_summary}\n\n"
     if project_context:
         user_content += f"{project_context}\n\n"
@@ -853,6 +956,7 @@ def api_projects_ai():
 
     reply_text = ""
     suggested_bom = []
+    suggested_design = {"pin_outs": [], "wiring": [], "schematic": "", "enclosure": ""}
 
     if get_openai_api_key():
         try:
@@ -863,10 +967,11 @@ def api_projects_ai():
                     {"role": "system", "content": system},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=800,
+                max_tokens=1200,
             )
             reply_text = (resp.choices[0].message.content or "").strip()
             suggested_bom = _parse_bom_from_ai_text(reply_text)
+            suggested_design = _parse_design_from_ai_text(reply_text)
         except Exception as e:
             reply_text = f"(AI error: {e})"
     else:
@@ -888,6 +993,7 @@ def api_projects_ai():
     return jsonify({
         "reply": reply_text,
         "suggested_bom": bom_with_stock,
+        "suggested_design": suggested_design,
         "project_id": project_id or None,
     })
 
@@ -934,13 +1040,7 @@ def api_projects_ai_stream():
                 )
             existing_bom = proj.get("parts_bom") or []
 
-    system = (
-        "You are a project planning assistant for electronics/hardware projects. "
-        "The user has an inventory list below; use it to suggest parts they might already have or need to buy. "
-        "Help them develop their idea into a concrete plan. "
-        "When you suggest specific parts, end your reply with a line starting exactly with 'BOM:' followed by a JSON array of objects, each with keys: name (string), part_number (string, optional), quantity (integer). "
-        "Example: BOM: [{\"name\": \"ESP32 DevKit C\", \"part_number\": \"\", \"quantity\": 2}, {\"name\": \"10k resistor\", \"part_number\": \"\", \"quantity\": 10}]"
-    )
+    system = PROJECT_PLANNING_SYSTEM
     user_content = f"Inventory (id, name, part_number, category, qty):\n{inventory_summary}\n\n"
     if project_context:
         user_content += f"{project_context}\n\n"
@@ -952,7 +1052,7 @@ def api_projects_ai_stream():
         reply_text = ""
         if not get_openai_api_key():
             yield _sse_event({"delta": "Set an API key in AI API settings to use project planning with AI."})
-            yield _sse_event({"done": True, "suggested_bom": []})
+            yield _sse_event({"done": True, "suggested_bom": [], "suggested_design": {"pin_outs": [], "wiring": [], "schematic": "", "enclosure": ""}})
             return
         try:
             client = _openai_client()
@@ -962,7 +1062,7 @@ def api_projects_ai_stream():
                     {"role": "system", "content": system},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=800,
+                max_tokens=1200,
                 stream=True,
             )
             for chunk in stream:
@@ -975,6 +1075,7 @@ def api_projects_ai_stream():
             yield _sse_event({"delta": f"(AI error: {e})"})
 
         suggested_bom = _parse_bom_from_ai_text(reply_text)
+        suggested_design = _parse_design_from_ai_text(reply_text)
         bom_with_stock = []
         if suggested_bom and conn:
             try:
@@ -985,7 +1086,7 @@ def api_projects_ai_stream():
             bom_with_stock = [{"name": r.get("name"), "part_number": r.get("part_number"), "quantity": r.get("quantity", 0), "in_stock": None, "qty_on_hand": None, "shortfall": None} for r in suggested_bom]
         if conn:
             conn.close()
-        yield _sse_event({"done": True, "suggested_bom": bom_with_stock})
+        yield _sse_event({"done": True, "suggested_bom": bom_with_stock, "suggested_design": suggested_design})
 
     return Response(
         stream_with_context(generate()),
@@ -1047,9 +1148,79 @@ def api_projects_bom_mouser(proposal_id):
     )
 
 
+def _pinout_csv(rows):
+    """CSV for pin assignments: Pin, Function, Notes."""
+    lines = ["Pin,Function,Notes"]
+    for r in rows or []:
+        pin = (r.get("pin") or "").replace('"', '""')
+        fn = (r.get("function") or "").replace('"', '""')
+        notes = (r.get("notes") or "").replace('"', '""')
+        lines.append(f'"{pin}","{fn}","{notes}"')
+    return "\n".join(lines)
+
+
+def _wiring_csv(rows):
+    """CSV for wiring/netlist: From, To, Net."""
+    lines = ["From,To,Net"]
+    for r in rows or []:
+        fr = (r.get("from") or "").replace('"', '""')
+        to = (r.get("to") or "").replace('"', '""')
+        net = (r.get("net") or "").replace('"', '""')
+        lines.append(f'"{fr}","{to}","{net}"')
+    return "\n".join(lines)
+
+
+@app.route("/api/projects/<proposal_id>/export/pinout", methods=["GET"])
+def api_projects_export_pinout(proposal_id):
+    """Download pin assignments as CSV for PCB/CAD use."""
+    proj = load_proposal(proposal_id)
+    if proj is None:
+        return jsonify({"error": "Not found"}), 404
+    rows = proj.get("pin_outs") or []
+    from io import BytesIO
+    buf = BytesIO(_pinout_csv(rows).encode("utf-8"))
+    return send_file(buf, mimetype="text/csv", as_attachment=True, download_name=f"pinout_{proposal_id}.csv")
+
+
+@app.route("/api/projects/<proposal_id>/export/wiring", methods=["GET"])
+def api_projects_export_wiring(proposal_id):
+    """Download wiring/netlist as CSV for schematic/PCB tools."""
+    proj = load_proposal(proposal_id)
+    if proj is None:
+        return jsonify({"error": "Not found"}), 404
+    rows = proj.get("wiring") or []
+    from io import BytesIO
+    buf = BytesIO(_wiring_csv(rows).encode("utf-8"))
+    return send_file(buf, mimetype="text/csv", as_attachment=True, download_name=f"wiring_{proposal_id}.csv")
+
+
+@app.route("/api/projects/<proposal_id>/export/schematic", methods=["GET"])
+def api_projects_export_schematic(proposal_id):
+    """Download schematic notes as markdown."""
+    proj = load_proposal(proposal_id)
+    if proj is None:
+        return jsonify({"error": "Not found"}), 404
+    text = proj.get("schematic") or "# Schematic\n\n(No schematic notes yet.)"
+    from io import BytesIO
+    buf = BytesIO(text.encode("utf-8"))
+    return send_file(buf, mimetype="text/markdown", as_attachment=True, download_name=f"schematic_{proposal_id}.md")
+
+
+@app.route("/api/projects/<proposal_id>/export/enclosure", methods=["GET"])
+def api_projects_export_enclosure(proposal_id):
+    """Download enclosure/CAD notes as markdown for 3D printing or mechanical design."""
+    proj = load_proposal(proposal_id)
+    if proj is None:
+        return jsonify({"error": "Not found"}), 404
+    text = proj.get("enclosure") or "# Enclosure\n\n(No enclosure notes yet.)"
+    from io import BytesIO
+    buf = BytesIO(text.encode("utf-8"))
+    return send_file(buf, mimetype="text/markdown", as_attachment=True, download_name=f"enclosure_{proposal_id}.md")
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes")
-    print(f"Using DB: {DB_PATH}")
+    print(f"Using DB: {get_database_path()}")
     print(f"Open http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=debug)

@@ -97,6 +97,12 @@ Build the image first (see "Run with Docker" above).
 
 3. Restart Cursor or reload MCP so the server is available.
 
+**If the server will not start:**
+
+- **Docker:** Ensure the image is built: `docker compose -f mcp-server/docker-compose.yml build` (from repo root). In Cursor MCP config, replace `REPO_ROOT` with your **absolute** repo path (e.g. `/Users/you/Documents/fs-tech/esp32`).
+- **Node (local):** Use the **absolute** path to `mcp-server/dist/index.js` in `args`, and set `cwd` to the **repo root** (so `ESP32_LAB_REPO_ROOT` can be omitted, or set it to the same path). Run `npm run build` inside `mcp-server/` so `dist/` exists.
+- Check Cursor’s MCP / Developer logs for stderr: a successful start prints `[esp32-lab-mcp] Server running on stdio (repo: ...)`; failures print `[esp32-lab-mcp] Fatal: ...`.
+
 After that you can:
 - Use **Resources** to open project context, roadmap, development plan, inventory, firmware index, or repos.
 - Use **Tools** (e.g. `get_project_status`, `get_next_tasks`, `get_device_context`, `list_devices`, `get_inventory_summary`) in agent/chats to stay on task.

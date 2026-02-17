@@ -161,10 +161,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 // --- Run ---
 async function main() {
+    const repoRoot = process.env.ESP32_LAB_REPO_ROOT || process.cwd();
+    if (!fs.existsSync(repoRoot)) {
+        console.error(`[esp32-lab-mcp] REPO_ROOT does not exist: ${repoRoot}`);
+        process.exit(1);
+    }
     const transport = new StdioServerTransport();
     await server.connect(transport);
+    console.error("[esp32-lab-mcp] Server running on stdio (repo: " + repoRoot + ")");
 }
 main().catch((err) => {
-    console.error(err);
+    console.error("[esp32-lab-mcp] Fatal:", err instanceof Error ? err.message : String(err));
     process.exit(1);
 });
