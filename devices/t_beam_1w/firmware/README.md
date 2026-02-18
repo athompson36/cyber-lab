@@ -47,7 +47,24 @@ firmware/
 | MeshCore   | `firmware/meshcore/repo/`      |
 | Meshtastic | `firmware/meshtastic/repo/`    |
 
-**Current state:** Both repos live under `devices/t_beam_1w/firmware/` per the lab contract. Build from `firmware/<name>/repo`; config uses these paths (see `inventory/app/config.BUILD_CONFIG`).
+**Current state:** Upstream firmware is tracked as **git submodules**. Clone with:
+
+```bash
+git clone --recurse-submodules <this-repo>
+# or, if already cloned:
+git submodule update --init --recursive
+```
+
+- **MeshCore:** `firmware/meshcore/repo` → [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore)
+- **Meshtastic:** `firmware/meshtastic/repo/firmware` → [meshtastic/firmware](https://github.com/meshtastic/firmware)
+
+Lab overlays (e.g. T-Deck trackball calibration) are in **patches**; apply after submodule update:
+
+```bash
+cd devices/t_beam_1w/firmware/meshtastic/repo && ./scripts/apply_lab_patches.sh
+```
+
+Build from `firmware/<name>/repo`; config uses these paths (see `inventory/app/config.BUILD_CONFIG`).
 
 ## Build
 

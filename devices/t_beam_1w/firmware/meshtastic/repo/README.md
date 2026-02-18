@@ -8,9 +8,9 @@ The zip does **not** bundle Meshtastic source. Instead, it provides:
 - a place to record the board’s pin mapping
 
 ## What you do with this
-1. Clone Meshtastic firmware into `./firmware/` (instructions below)
-2. Apply the templates in `./patches/` (Cursor can do this quickly)
-3. Fill in the real pin mapping in `docs/TBEAM_1W_PINMAP.md`
+1. Get firmware: clone the main repo with `git clone --recurse-submodules`, or run `git submodule update --init --recursive`. Meshtastic lives in `./firmware/` as a submodule.
+2. (Optional) Apply lab overlays (e.g. T-Deck trackball calibration): `./scripts/apply_lab_patches.sh`
+3. Apply the T-Beam 1W templates in `./patches/templates/` (Cursor can do this quickly) and fill in `docs/TBEAM_1W_PINMAP.md`
 4. Build with PlatformIO
 5. Flash with `esptool` (works reliably on ESP32‑S3)
 
@@ -19,12 +19,14 @@ The zip does **not** bundle Meshtastic source. Instead, it provides:
 - PlatformIO Core: `brew install platformio`
 - Python tools for flashing: `pipx install esptool`
 
-## Clone Meshtastic
-From the project root:
+## Getting Meshtastic firmware
+The main repo tracks Meshtastic as a submodule. From the **main repo root**:
 
 ```bash
-git clone https://github.com/meshtastic/firmware.git firmware
+git submodule update --init --recursive
 ```
+
+That populates `devices/t_beam_1w/firmware/meshtastic/repo/firmware`. To apply lab patches (T-Deck trackball calibration, etc.) from this directory: `./scripts/apply_lab_patches.sh`.
 
 ## Build (after you add the new env)
 ```bash

@@ -1,0 +1,6 @@
+[submodule "devices/t_beam_1w/firmware/meshtastic/repo/firmware"]
+	path = devices/t_beam_1w/firmware/meshtastic/repo/firmware
+	url = https://github.com/meshtastic/firmware.git
+[submodule "devices/t_beam_1w/firmware/meshcore/repo"]
+	path = devices/t_beam_1w/firmware/meshcore/repo
+	url = https://github.com/meshcore-dev/MeshCore.git

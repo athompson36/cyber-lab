@@ -1,0 +1,121 @@
+diff --git a/src/input/TrackballInterruptBase.cpp b/src/input/TrackballInterruptBase.cpp
+index bbd07e199..84b47b808 100644
+--- a/src/input/TrackballInterruptBase.cpp
++++ b/src/input/TrackballInterruptBase.cpp
+@@ -134,24 +134,28 @@ int32_t TrackballInterruptBase::runOnce()
+         }
+     }
+ 
+-#if defined(T_DECK) // T-deck gets a super-simple debounce on trackball
++#if defined(T_DECK) // T-deck gets a super-simple debounce on trackball + input calibration (scroll speed)
+     if (this->action == TB_ACTION_PRESSED && !pressDetected) {
+         // Start long press detection
+         pressDetected = true;
+         pressStartTime = millis();
+         // Don't send event yet, wait to see if it's a long press
+     } else if (this->action == TB_ACTION_UP && lastEvent == TB_ACTION_UP) {
+-        // LOG_DEBUG("Trackball event UP");
+-        e.inputEvent = this->_eventUp;
++        if (_shouldEmitDirectionEvent()) {
++            e.inputEvent = this->_eventUp;
++        }
+     } else if (this->action == TB_ACTION_DOWN && lastEvent == TB_ACTION_DOWN) {
+-        // LOG_DEBUG("Trackball event DOWN");
+-        e.inputEvent = this->_eventDown;
++        if (_shouldEmitDirectionEvent()) {
++            e.inputEvent = this->_eventDown;
++        }
+     } else if (this->action == TB_ACTION_LEFT && lastEvent == TB_ACTION_LEFT) {
+-        // LOG_DEBUG("Trackball event LEFT");
+-        e.inputEvent = this->_eventLeft;
++        if (_shouldEmitDirectionEvent()) {
++            e.inputEvent = this->_eventLeft;
++        }
+     } else if (this->action == TB_ACTION_RIGHT && lastEvent == TB_ACTION_RIGHT) {
+-        // LOG_DEBUG("Trackball event RIGHT");
+-        e.inputEvent = this->_eventRight;
++        if (_shouldEmitDirectionEvent()) {
++            e.inputEvent = this->_eventRight;
++        }
+     }
+ #else
+     if (this->action == TB_ACTION_PRESSED && !digitalRead(_pinPress) && !pressDetected) {
+@@ -187,6 +191,12 @@ int32_t TrackballInterruptBase::runOnce()
+ 
+     // Only update lastEvent for non-press actions or completed press actions
+     if (this->action != TB_ACTION_PRESSED || !pressDetected) {
++#ifdef T_DECK
++        if ((action == TB_ACTION_UP || action == TB_ACTION_DOWN || action == TB_ACTION_LEFT || action == TB_ACTION_RIGHT) &&
++            lastEvent != action) {
++            _directionEmitCount = 0; // Direction changed: reset scroll calibration counter
++        }
++#endif
+         lastEvent = action;
+         if (!pressDetected) {
+             this->action = TB_ACTION_NONE;
+@@ -196,6 +206,14 @@ int32_t TrackballInterruptBase::runOnce()
+     return 50; // Check more frequently for better long press detection
+ }
+ 
++#ifdef T_DECK
++bool TrackballInterruptBase::_shouldEmitDirectionEvent()
++{
++    _directionEmitCount++;
++    return (_directionEmitCount % TRACKBALL_SCROLL_DIVISOR == 1);
++}
++#endif
++
+ void TrackballInterruptBase::intPressHandler()
+ {
+     this->action = TB_ACTION_PRESSED;
+diff --git a/src/input/TrackballInterruptBase.h b/src/input/TrackballInterruptBase.h
+index 67d4ee449..935a656b8 100644
+--- a/src/input/TrackballInterruptBase.h
++++ b/src/input/TrackballInterruptBase.h
+@@ -12,6 +12,13 @@
+ #endif
+ #endif
+ 
++#ifdef T_DECK
++#ifndef TRACKBALL_SCROLL_DIVISOR
++/** T-Deck trackball scroll speed: only 1 in every N direction events is emitted (1=full speed, 2=half, 3=one-third). */
++#define TRACKBALL_SCROLL_DIVISOR 2
++#endif
++#endif
++
+ class TrackballInterruptBase : public Observable<const InputEvent *>, public concurrency::OSThread
+ {
+   public:
+@@ -67,4 +74,8 @@ class TrackballInterruptBase : public Observable<const InputEvent *>, public con
+     input_broker_event _eventPressedLong = INPUT_BROKER_NONE;
+     const char *_originName;
+     TrackballInterruptBaseActionType lastEvent = TB_ACTION_NONE;
++#ifdef T_DECK
++    uint8_t _directionEmitCount = 0; // Input calibration: emit only every Nth scroll event
++    bool _shouldEmitDirectionEvent(); // Returns true every TRACKBALL_SCROLL_DIVISOR-th call per direction
++#endif
+ };
+diff --git a/variants/esp32s3/t-deck/variant.h b/variants/esp32s3/t-deck/variant.h
+index 8d2996131..dd1c2f668 100644
+--- a/variants/esp32s3/t-deck/variant.h
++++ b/variants/esp32s3/t-deck/variant.h
+@@ -63,7 +63,7 @@
+ #define KB_BL_PIN 46                   // not used for now
+ #define CANNED_MESSAGE_MODULE_ENABLE 1
+ 
+-// trackball
++// trackball (scroll ball)
+ #define HAS_TRACKBALL 1
+ #define TB_UP 3
+ #define TB_DOWN 15
+@@ -71,6 +71,10 @@
+ #define TB_RIGHT 2
+ #define TB_PRESS 0 // BUTTON_PIN
+ #define TB_DIRECTION FALLING
++// Input calibration: scroll speed. Emit 1 in every N direction events (1=full, 2=half, 3=one-third). Override in platformio.ini if needed: -DTRACKBALL_SCROLL_DIVISOR=3
++#ifndef TRACKBALL_SCROLL_DIVISOR
++#define TRACKBALL_SCROLL_DIVISOR 2
++#endif
+ 
+ // microphone
+ #define ES7210_SCK 47
