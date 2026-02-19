@@ -1,0 +1,35 @@
+{
+  "id": "meshcore",
+  "name": "MeshCore",
+  "description": "Off-grid mesh networking firmware with BLE companion, room server, and repeater modes",
+  "upstream": {
+    "repo": "https://github.com/ripplebiz/MeshCore",
+    "branch": "main",
+    "license": "MIT"
+  },
+  "toolchain": "platformio",
+  "framework": "arduino",
+  "compatible_devices": ["t_beam_1w"],
+  "variants": [
+    {
+      "env": "T_Beam_1W_SX1262_companion_radio_ble",
+      "label": "Companion Radio (BLE)",
+      "description": "BLE companion for mobile apps"
+    },
+    {
+      "env": "T_Beam_1W_SX1262_room_server",
+      "label": "Room Server",
+      "description": "BBS / message store with serial CLI and remote management"
+    },
+    {
+      "env": "T_Beam_1W_SX1262_repeater",
+      "label": "Repeater",
+      "description": "Relay-only node with OLED and serial CLI"
+    }
+  ],
+  "build_flags": {
+    "SX126X_MAX_POWER": 22,
+    "SX126X_PA_RAMP_TIME": "0x05"
+  },
+  "artifact_pattern": "artifacts/t_beam_1w/meshcore/{date}/firmware.bin"
+}

@@ -1587,13 +1587,32 @@ button:hover {
   border-radius: 4px;
 }
 
+@media (max-width: 768px) {
+  .header { padding: 1rem; }
+  .header h1 { font-size: 1.2rem; }
+  .main { padding: 1rem; }
+  .tabs { gap: 0.15rem; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { white-space: nowrap; font-size: 0.75rem; padding: 0.4rem 0.6rem; flex-shrink: 0; }
+  .search-row, .ai-row { flex-direction: column; }
+  .search-row input[type="text"],
+  .ai-row input[type="text"] { min-width: 0; width: 100%; }
+  .toolbar { gap: 0.75rem; }
+}
 @media (max-width: 640px) {
   .header, .main {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
   .inventory-table th:nth-child(n+4),
   .inventory-table td:nth-child(n+4) {
     display: none;
   }
+  .inventory-table { font-size: 0.75rem; }
+  .inventory-table th, .inventory-table td { padding: 0.4rem 0.5rem; }
+  .flash-panel, .debug-panel { padding: 0.75rem; }
+  .flash-form { flex-direction: column; }
+  .flash-form select, .flash-form button { width: 100%; }
+  .footer { font-size: 0.7rem; padding: 0.75rem; }
+  .config-wizard-steps { min-width: 0; }
 }

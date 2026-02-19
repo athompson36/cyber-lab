@@ -1,0 +1,26 @@
+{
+  "id": "meshtastic",
+  "name": "Meshtastic",
+  "description": "Open-source LoRa mesh communicator with mobile app, GPS, and channel support",
+  "upstream": {
+    "repo": "https://github.com/meshtastic/firmware",
+    "branch": "master",
+    "license": "GPL-3.0"
+  },
+  "toolchain": "platformio",
+  "framework": "arduino",
+  "compatible_devices": ["t_beam_1w"],
+  "variants": [
+    {
+      "env": "t-beam-1w",
+      "label": "T-Beam 1W (ESP32-S3 + SX1262)",
+      "description": "Custom variant with 1W PA safety, 2S battery, fan control"
+    }
+  ],
+  "build_flags": {
+    "SX126X_MAX_POWER": 22,
+    "BATTERY_SERIES_CELLS": 2,
+    "RF95_FAN_EN": 41
+  },
+  "artifact_pattern": "artifacts/t_beam_1w/meshtastic/{date}/firmware.factory.bin"
+}

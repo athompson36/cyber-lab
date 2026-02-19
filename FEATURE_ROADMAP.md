@@ -1,4 +1,4 @@
-# Full Feature Roadmap — Cyber-Lab
+# Full Feature Roadmap — ESP32 Lab
 
 **Repository:** `https://github.com/athompson36/esp32`  
 **Context:** Cyber-Lab — unified ESP32 development environment (local-first, containerized, deterministic)  
@@ -25,8 +25,8 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 **Actions:**
 
-- ~~Create `devices/t_beam_1w/` with contract~~ Done (L1/L2). MeshCore and Meshtastic under `devices/t_beam_1w/firmware/{meshcore,meshtastic}/repo`; overlays in `firmware/*/overlays/`.
-- Populate `pinmaps/` and `notes/` from TBEAM_1W_PINMAP, T-BEAM-1W-FIXES, MESHTASTIC-IMPROVEMENTS, BATTERY-FIX as needed.
+- ~~Create `devices/t_beam_1w/` with contract~~ Done (L1/L2).
+- ~~Populate `pinmaps/` and `notes/`~~ Done: HARDWARE_LAYOUT, PERIPHERALS, PROTOTYPING, SDK_AND_TOOLS, T_BEAM_NO_BOOT, COST_REDUCED_VARIANT, MESHTASTIC_RUNTIME_CHECKLIST.
 
 ### 2.2 Containers & Toolchains
 
@@ -39,8 +39,9 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 **Actions:**
 
-- Add `docker/` with Dockerfiles for `platformio-lab` (Ubuntu 22.04 + PlatformIO), `esp-idf-lab` as needed.
-- Document “build in container, flash from macOS” and avoid Docker USB passthrough unless required.
+- ~~Add `docker/` with Dockerfiles for `platformio-lab`~~ Done.
+- ~~Document "build in container, flash from macOS"~~ Done (README, docker/README).
+- Future: `esp-idf-lab`, `rust-embedded-lab`, `rf-lab` as device needs arise.
 
 ### 2.3 Build Orchestrator & Artifacts
 
@@ -67,7 +68,7 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 | ID | Feature | Status | Notes |
 |----|---------|--------|--------|
-| L15 | Webapp for iOS / iPadOS / Android | 🔴 Planned | PWA or native wrapper: inventory search, AI query, project planning, Docker/device status; responsive layout and installable on mobile |
+| L15 | Webapp for iOS / iPadOS / Android | 🟢 Done | PWA manifest + service worker + responsive breakpoints; installable on iOS/Android home screen |
 | L16 | **iOS / WatchOS native app** (voice + text AI Agent chat) | 🔴 Future | Native iOS and WatchOS app with voice and text AI Agent chat; same lab context (devices, firmware, config, flash) as web app. **Prerequisite:** Web app fully tested and stable. |
 
 ---
@@ -88,8 +89,8 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 **Remaining:**
 
-- Document cost-reduced variant (no AXP2101): keep fallback, document in `shared/` and device `notes/`.
-- Optional: temperature-based fan, adaptive TX power, duty-cycle limit (see MESHTASTIC-IMPROVEMENTS “Future”).
+- ~~Document cost-reduced variant (no AXP2101)~~ Done: `shared/t_beam_1w/RF_PA_FAN_PMU.md` §3 + `devices/t_beam_1w/notes/COST_REDUCED_VARIANT.md`.
+- Optional (future): temperature-based fan, adaptive TX power, duty-cycle limit (see MESHTASTIC-IMPROVEMENTS).
 
 ### 3.2 MeshCore Firmware Variants
 
@@ -101,8 +102,8 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 **Actions:**
 
-- Ensure all three are buildable via lab orchestrator and artifacts path once L9/L10 are in place.
-- Add `configs/` examples for each variant under device folder.
+- ~~Ensure all three are buildable via lab orchestrator~~ Done (scripts/lab-build.sh + BUILD_CONFIG).
+- ~~Add `configs/` examples for each variant~~ Done (configs/meshcore/{repeater,room_server,companion}_example.env).
 
 ---
 
@@ -112,16 +113,16 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 | ID | Feature | Status | Notes |
 |----|---------|--------|--------|
-| M1 | PlatformIO installed (e.g. `brew install platformio`) | 🟡 Unknown | Use container (platformio-lab) for builds |
+| M1 | PlatformIO installed (e.g. `brew install platformio`) | 🟢 Done | platformio-lab container; also available via `pip install platformio` on host |
 | M2 | Meshtastic firmware cloned in `firmware/` | 🟢 Done | devices/t_beam_1w/firmware/meshtastic/repo |
 | M3 | `env:tbeam-1w` (or equivalent) in `platformio.ini` | 🟢 Done | firmware/variants/esp32s3/t-beam-1w env t-beam-1w |
 | M4 | Variant files in `firmware/variants/tbeam_1w/` (variant.h, variant.cpp) | 🟢 Done | variants/esp32s3/t-beam-1w/ |
 
 **Actions:**
 
-- Verify PlatformIO + clone in CI or README.
-- Apply template: copy variant, merge platformio env, populate pins from TBEAM_1W_PINMAP.md (and MeshCore variant for consistency).
-- Align Meshtastic variant with MeshCore pinmap (GPIO 40 power-enable, 21 RXEN, ramp, 22 dBm, fan GPIO 41).
+- ~~Verify PlatformIO + clone in CI or README~~ Done (platformio-lab container + CI workflow).
+- ~~Apply template: copy variant, merge platformio env, populate pins~~ Done (variant.h/variant.cpp, platformio.ini env).
+- ~~Align Meshtastic variant with MeshCore pinmap~~ Done (GPIO 40, 21, ramp, 22 dBm, fan 41).
 
 ### 4.2 Pin Mapping & Safety
 
@@ -142,8 +143,10 @@ This roadmap aligns the **embedded firmware lab** (CONTEXT.md) with current **T-
 
 **Actions:**
 
-- Execute DEVELOPMENT_PLAN Phases 1–5 (setup, pins, template, config, first build).
-- Then Phase 6 (integration points), Phase 7 (hardware test), Phase 8 (docs).
+- ~~Execute DEVELOPMENT_PLAN Phases 1–5~~ Done (setup, pins, template, config, first build).
+- ~~Phase 6 (integration points)~~ Done.
+- Phase 7 (hardware test): Run MESHTASTIC_RUNTIME_CHECKLIST on real T-Beam 1W.
+- ~~Phase 8 (docs)~~ Done.
 
 ---
 
@@ -163,8 +166,8 @@ Items from MeshCore README “Road-Map / To-Do” that affect this lab or T-Beam
 
 **Actions:**
 
-- In `shared/` or `docs/`, keep a short “MeshCore roadmap” summary and version compatibility notes.
-- When upstream adds features, re-run builds and hardware smoke tests; update overlays if needed.
+- ~~MeshCore roadmap summary and version compatibility~~ Done: `shared/t_beam_1w/MESHCORE_UPSTREAM.md`.
+- When upstream adds features, follow the update checklist in MESHCORE_UPSTREAM.md.
 
 ---
 
@@ -182,9 +185,9 @@ Items from MeshCore README “Road-Map / To-Do” that affect this lab or T-Beam
 
 **Actions:**
 
-- Add root README.md (lab overview, prerequisites, “build in container, flash from host”, link to CONTEXT.md and FEATURE_ROADMAP.md).
-- Add .gitignore; optionally keep `artifacts/` in git or document as optional.
-- Decide whether `athompson36/cyber-lab` is the canonical lab repo; if so, document in README.
+- ~~Add root README.md~~ Done.
+- ~~Add .gitignore~~ Done.
+- ~~Canonical repo decided~~ `athompson36/esp32` (updated in all docs).
 
 ### 6.2 Device Layout and Docs
 
@@ -206,34 +209,37 @@ Items from MeshCore README “Road-Map / To-Do” that affect this lab or T-Beam
 
 ## 7. Priority Overview
 
-### P0 — Repo and safety
+### P0 — Repo and safety — ALL DONE
 
-- G2 README, G3 .gitignore, G4 no secrets.
-- M5/M6 pin safety and PA/power-enable already documented; keep enforced in both MeshCore and Meshtastic.
+- ~~G2 README, G3 .gitignore, G4 no secrets~~ Done.
+- ~~M5/M6 pin safety and PA/power-enable~~ Done and documented in shared/t_beam_1w/RF_PA_FAN_PMU.md.
 
-### P1 — Lab structure and one device
+### P1 — Lab structure and one device — ALL DONE
 
-- ~~L1/L2~~ Done: All devices have contract (`firmware/`, `configs/`, `pinmaps/`, `notes/`); L3 partial (MeshCore + Meshtastic under t_beam_1w).
-- ~~L12~~ Done: `shared/t_beam_1w/` with RF_PA_FAN_PMU.md; device context links to it.
+- ~~L1/L2/L3~~ Done: All devices have contract; MeshCore + Meshtastic under t_beam_1w.
+- ~~L12~~ Done: `shared/t_beam_1w/` with RF_PA_FAN_PMU.md, MESHCORE_UPSTREAM.md.
 
-### P2 — Build and test
+### P2 — Build and test — ALL DONE (except M11 hardware test)
 
-- M1–M4: PlatformIO, clone, apply Meshtastic variant, pins.
-- M8–M9: First successful Meshtastic build and artifact path.
-- ~~L5~~ Done: platformio-lab container and document “build in container”.
-- ~~L9/L10~~ Done: scripts/lab-build.sh; artifacts layout and never auto-delete.
+- ~~M1–M4~~ Done: PlatformIO, clone, Meshtastic variant, pins.
+- ~~M8–M10~~ Done: First successful build, artifacts, flash + serial monitor.
+- M11: Pending hardware runtime test on real T-Beam 1W.
+- ~~L5/L9/L10~~ Done: platformio-lab container, lab-build.sh, artifacts layout.
 
-### P3 — Orchestrator and multi-device
+### P3 — Orchestrator and multi-device — ALL DONE
 
 - ~~L9~~ Done: scripts/lab-build.sh.
-- L13/L14: Scripts and toolchain detection.
-- G6/G9/G10: CI for at least T-Beam 1W (MeshCore + Meshtastic).
+- ~~L13/L14~~ Done: Scripts and toolchain detection.
+- ~~G6/G9/G10/G11~~ Done: CI for T-Beam 1W (MeshCore + Meshtastic).
 
 ### P4 — Future
 
-- L6–L8 containers, L11 OTA, G8 changelog.
-- **L15** Webapp for iOS / iPadOS / Android (PWA or native wrapper: inventory, project planning, device status on mobile).
+- L6–L8 containers, L11 OTA.
+- ~~L15 PWA~~ Done.
+- L16: iOS / WatchOS native app (prerequisite: web app fully tested).
 - MeshCore roadmap items MC1–MC7 as upstream lands.
+- §16: Cyberdeck Manager — Map manager, Hardware inspector, CLI (Typer + FastAPI).
+- §17: PCB & 3D Design Stack — Phases 1–4.
 - Additional devices (e.g. Heltec, T-Deck Plus) per CONTEXT.md.
 
 ---
@@ -261,15 +267,15 @@ The Cyberdeck Manager extends the lab into a **device + firmware + map + flash +
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Device registry (JSON + DB) | 🟡 Scaffold | `registry/devices/*.json`; schema `devices` table |
-| Firmware registry | 🔴 Planned | GitHub metadata, compatibility mapping |
+| Device registry (JSON + DB) | 🟢 Done | `registry/devices/*.json` (8 devices); schema `devices` table in cyberdeck_schema.sql |
+| Firmware registry | 🟢 Done | registry/firmware/{meshcore,meshtastic}.json — upstream, variants, build flags, artifact pattern |
 | Map manager (regions, tiles, SD) | 🔴 Planned | Region scanner, wizard, tile calculator, SD validator |
-| Flash (USB + SD Launcher) | 🟡 Partial | Inventory app flash + auto-detect; add SD Launcher path |
+| Flash (USB + SD Launcher) | 🟢 Done | Inventory app: esptool USB flash + UF2/SD launcher detection per device |
 | Hardware inspector | 🔴 Planned | Serial/BLE/USB detection, fleet snapshots |
-| RF/CAN presets | 🟡 Scaffold | `registry/rf_presets.json`; CAN registry |
-| Multi-user & DB | 🟡 Schema | users, flash_history, map_builds, hardware_snapshots |
+| RF/CAN presets | 🟢 Done | `registry/rf_presets.json` (USA, EU, custom); CAN in schema |
+| Multi-user & DB | 🟢 Done | cyberdeck_schema.sql: users, flash_history, map_builds, hardware_snapshots, rf_presets |
 | CLI (Typer) + Web (FastAPI) | 🔴 Planned | See scaffold; optional `cyberdeck_cli/`, extend or add web |
-| Docker | 🟡 Reference | `docker/Dockerfile.cyberdeck`; pyproject.cyberdeck.toml |
+| Docker | 🟢 Done | `docker/Dockerfile.cyberdeck`; pyproject.cyberdeck.toml |
 
 ---
 
