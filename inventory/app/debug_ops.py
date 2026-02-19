@@ -132,9 +132,17 @@ def serial_start(port: str, baud: int = 115200) -> tuple[bool, str]:
 
 
 def serial_stop() -> None:
-    """Stop serial monitor and clear buffer."""
-    global _serial_thread, _serial_port
+    """Stop serial monitor and clear buffer. Closes the port from this thread so it is released immediately."""
+    global _serial_thread, _serial_port, _serial_reader
     _serial_stop.set()
+    # Close the serial port from here so the OS releases it immediately (thread may be blocked in read())
+    reader = _serial_reader
+    if reader is not None:
+        try:
+            reader.close()
+        except Exception:
+            pass
+        _serial_reader = None
     if _serial_thread and _serial_thread.is_alive():
         _serial_thread.join(timeout=2.0)
     _serial_thread = None

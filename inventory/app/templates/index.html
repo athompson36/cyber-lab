@@ -156,6 +156,9 @@
           <option value="launcher">Launcher</option>
         </select>
       </div>
+      <div id="flash-uf2-notice" class="flash-uf2-notice" role="status" hidden>
+        <strong>UF2 device.</strong> Backup, restore, and flash are not available in this app. Use the <strong>magnetic pogo cable</strong> and copy a UF2 file to the <strong>HT-n5262</strong> drive. See <a href="/api/devices/ht_mesh_pocket_10000/notes/FLASHING_UF2.md" target="_blank" rel="noopener">FLASHING_UF2.md</a>.
+      </div>
 
       <section class="flash-build-section" id="flash-build-section" aria-labelledby="flash-build-heading">
         <h3 id="flash-build-heading" class="flash-build-heading">Firmware build</h3>
@@ -215,12 +218,16 @@
         </div>
         <div class="flash-action-block">
           <h3>Backup</h3>
-          <select id="flash-backup-type">
-            <option value="full">Full flash</option>
-            <option value="app">App partition (0x10000)</option>
-            <option value="nvs">NVS (0x9000)</option>
-          </select>
-          <button type="button" id="btn-flash-backup">Backup</button>
+          <div class="flash-row">
+            <select id="flash-backup-type">
+              <option value="full">Full flash</option>
+              <option value="app">App partition (0x10000)</option>
+              <option value="nvs">NVS (0x9000)</option>
+            </select>
+            <label for="flash-backup-name">Name (optional)</label>
+            <input type="text" id="flash-backup-name" class="flash-input" placeholder="e.g. before-upgrade" autocomplete="off" title="Custom filename for this backup (saved in artifacts/backups)">
+            <button type="button" id="btn-flash-backup">Backup</button>
+          </div>
           <span id="flash-backup-status" class="flash-status"></span>
         </div>
         <div id="backup-progress-dialog" class="backup-progress-overlay" role="dialog" aria-modal="true" aria-labelledby="backup-progress-title" hidden>
@@ -240,6 +247,7 @@
           <input type="file" id="flash-restore-upload" accept=".bin" style="display:none">
           <button type="button" id="btn-flash-restore-choose">Upload .bin…</button>
           <button type="button" id="btn-flash-restore">Restore</button>
+          <button type="button" id="btn-flash-delete-restore" class="btn-delete" title="Delete selected backup or firmware file from disk">Delete selected</button>
           <span id="flash-restore-status" class="flash-status"></span>
         </div>
         <div class="flash-action-block">
@@ -251,6 +259,7 @@
           <input type="file" id="flash-flash-upload" accept=".bin" style="display:none">
           <button type="button" id="btn-flash-flash-choose">Upload .bin…</button>
           <button type="button" id="btn-flash-flash">Flash</button>
+          <button type="button" id="btn-flash-delete-flash" class="btn-delete" title="Delete selected backup or firmware file from disk">Delete selected</button>
           <span id="flash-flash-status" class="flash-status"></span>
         </div>
       </div>

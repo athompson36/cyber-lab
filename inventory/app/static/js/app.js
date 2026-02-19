@@ -725,6 +725,7 @@
   const btnDockerContainersRefresh = document.getElementById("btn-docker-containers-refresh");
   if (btnDockerContainersRefresh) btnDockerContainersRefresh.addEventListener("click", loadDockerContainers);
 
+  let lastFlashPorts = [];
   function loadFlashPorts(detect) {
     const sel = document.getElementById("flash-port");
     const deviceSel = document.getElementById("flash-device");
@@ -736,6 +737,7 @@
       .then((r) => r.json())
       .then((data) => {
         const ports = data.ports || [];
+        lastFlashPorts = ports;
         const portValue = (p) => (typeof p === "string" ? p : (p && p.port)) || "";
         const portLabel = (p) => {
           if (typeof p === "string") return p;
@@ -752,6 +754,7 @@
             sel.value = portValue(detected);
             loadFlashDevices().then(() => {
               if (deviceSel && detected.suggested_device_ids[0]) deviceSel.value = detected.suggested_device_ids[0];
+              updateFlashUf2Notice();
             });
           }
         }
@@ -774,17 +777,37 @@
       .catch(() => { sel.innerHTML = '<option value="">— Select port —</option>'; if (statusEl) statusEl.textContent = ""; });
   }
 
+  let flashDevicesList = [];
   function loadFlashDevices() {
     const sel = document.getElementById("flash-device");
     if (!sel) return Promise.resolve();
-    return fetch("/api/flash/devices")
+    return fetch("/api/flash/devices?t=" + Date.now())
       .then((r) => r.json())
       .then((data) => {
         const devices = Array.isArray(data.devices) ? data.devices : Object.entries(data.devices || {}).map(([id, d]) => ({ id, ...d }));
+        flashDevicesList = devices;
         sel.innerHTML = '<option value="">— Select device —</option>' + devices.map((d) => '<option value="' + escapeHtml(d.id) + '">' + escapeHtml((d.id || "") + " — " + (d.description || d.chip || "")) + "</option>").join("");
+        updateFlashUf2Notice();
       })
-      .catch(() => { sel.innerHTML = '<option value="">— Select device —</option>'; return Promise.resolve(); });
+      .catch(() => { flashDevicesList = []; sel.innerHTML = '<option value="">— Select device —</option>'; updateFlashUf2Notice(); return Promise.resolve(); });
   }
+  function isFlashDeviceUf2(deviceId) {
+    const d = flashDevicesList.find((x) => (x.id || "") === (deviceId || ""));
+    return d && (d.flash_method || "") === "uf2";
+  }
+  function updateFlashUf2Notice() {
+    const deviceId = document.getElementById("flash-device")?.value?.trim();
+    const notice = document.getElementById("flash-uf2-notice");
+    const uf2 = isFlashDeviceUf2(deviceId);
+    if (notice) notice.hidden = !uf2;
+    // Only disable Delete selected for UF2 (backup/restore/flash show message on click)
+    const disableDelete = uf2;
+    ["btn-flash-delete-restore", "btn-flash-delete-flash"].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = disableDelete;
+    });
+  }
+  document.getElementById("flash-device")?.addEventListener("change", updateFlashUf2Notice);
 
   function loadFlashArtifacts() {
     const restoreSel = document.getElementById("flash-restore-file");
@@ -898,48 +921,114 @@
     el.className = "flash-status " + (isError ? "flash-error" : "flash-ok");
   }
 
+  function getDeviceForPort(portVal) {
+    const portValClean = (portVal || "").trim();
+    if (!portValClean) return null;
+    const p = lastFlashPorts.find((x) => ((typeof x === "string" ? x : (x && x.port)) || "").trim() === portValClean);
+    const ids = p && p.suggested_device_ids ? p.suggested_device_ids : [];
+    for (let i = 0; i < ids.length; i++) {
+      if (!isFlashDeviceUf2(ids[i])) return ids[i];
+    }
+    return ids[0] || null;
+  }
+
   function doBackup() {
-    const port = document.getElementById("flash-port")?.value?.trim();
-    const deviceId = document.getElementById("flash-device")?.value?.trim();
-    const backupType = document.getElementById("flash-backup-type")?.value || "full";
     const statusEl = document.getElementById("flash-backup-status");
+    if (statusEl) statusEl.textContent = "";
+    const port = document.getElementById("flash-port")?.value?.trim();
+    let deviceId = document.getElementById("flash-device")?.value?.trim();
+    const backupType = document.getElementById("flash-backup-type")?.value || "full";
+    const backupName = document.getElementById("flash-backup-name")?.value?.trim() || null;
     const dialog = document.getElementById("backup-progress-dialog");
     const msgEl = document.getElementById("backup-progress-message");
-    if (!port || !deviceId) {
-      setFlashStatus("backup-status", "Select port and device.", true);
+    if (!port) {
+      setFlashStatus("backup-status", "Select a port.", true);
       return;
+    }
+    if (!deviceId) deviceId = getDeviceForPort(port);
+    if (!deviceId) {
+      setFlashStatus("backup-status", "Select a device (or click Refresh & detect devices).", true);
+      return;
+    }
+    if (isFlashDeviceUf2(deviceId)) {
+      const suggested = getDeviceForPort(port);
+      if (suggested) {
+        deviceId = suggested;
+        const deviceSel = document.getElementById("flash-device");
+        if (deviceSel) deviceSel.value = deviceId;
+        updateFlashUf2Notice();
+        setFlashStatus("backup-status", "Using " + deviceId + " (detected on this port). Reading flash…", false);
+      } else {
+        setFlashStatus("backup-status", "This device uses UF2; backup is not available here. Use the magnetic pogo cable to flash. See FLASHING_UF2.md (link above).", true);
+        return;
+      }
     }
     function closeBackupDialog() {
       if (dialog) dialog.hidden = true;
     }
+    const isFull = backupType === "full";
     if (msgEl) {
-      const typeLabel = backupType === "full" ? "Full flash (several minutes)" : backupType === "app" ? "App partition" : "NVS";
+      const typeLabel = isFull ? "Full flash — this takes ~20-25 min for 16 MB" : backupType === "app" ? "App partition" : "NVS";
       msgEl.textContent = "Reading " + typeLabel + ". Please wait…";
     }
     if (dialog) dialog.hidden = false;
-    if (statusEl) statusEl.textContent = "";
+    setFlashStatus("backup-status", "Reading flash…", false);
+    const progressBar = dialog?.querySelector(".backup-progress-bar");
+    let progressTimer = null;
+    if (isFull && progressBar) {
+      progressBar.style.width = "0%";
+      progressBar.style.transition = "width 0.5s";
+      progressTimer = setInterval(() => {
+        fetch("/api/flash/backup/progress").then(r => r.json()).then(d => {
+          if (d.pct != null) progressBar.style.width = d.pct + "%";
+          if (d.status === "reading" && d.chunk != null && d.total_chunks && msgEl) {
+            msgEl.textContent = "Reading chunk " + d.chunk + " / " + d.total_chunks + " (" + d.pct + "%)…";
+          } else if (d.status === "assembling" && msgEl) {
+            msgEl.textContent = "Assembling backup file…";
+          }
+        }).catch(() => {});
+      }, 3000);
+    }
+    function stopProgress() { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } }
+    const body = { port, device_id: deviceId, backup_type: backupType };
+    if (backupName) body.name = backupName;
     fetch("/api/flash/backup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ port, device_id: deviceId, backup_type: backupType }),
+      body: JSON.stringify(body),
     })
       .then((r) => {
-        if (!r.ok) return r.json().then((j) => { throw new Error(j.error || r.statusText); });
+        if (!r.ok) {
+          return r.text().then((text) => {
+            let errMsg = r.statusText;
+            try {
+              const j = JSON.parse(text);
+              if (j && typeof j.error === "string") errMsg = j.error;
+            } catch (_) {}
+            throw new Error(errMsg);
+          });
+        }
         return r.blob();
       })
       .then((blob) => {
+        stopProgress();
         closeBackupDialog();
-        const name = "backup-" + deviceId + "-" + backupType + "-" + new Date().toISOString().slice(0, 19).replace(/[:-]/g, "") + ".bin";
+        const name = backupName && /^[\w\-_.]+\.bin$/i.test(backupName)
+          ? (backupName.toLowerCase().endsWith(".bin") ? backupName : backupName + ".bin")
+          : "backup-" + deviceId + "-" + backupType + "-" + new Date().toISOString().slice(0, 19).replace(/[:-]/g, "") + ".bin";
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = name;
         a.click();
         URL.revokeObjectURL(a.href);
-        setFlashStatus("backup-status", "Download started.", false);
+        setFlashStatus("backup-status", "Download started." + (backupName ? " File saved in artifacts/backups." : ""), false);
+        if (backupName) loadFlashArtifacts();
       })
       .catch((err) => {
+        stopProgress();
         closeBackupDialog();
-        setFlashStatus("backup-status", "Error: " + err.message, true);
+        const msg = err && err.message ? err.message : String(err);
+        setFlashStatus("backup-status", msg.length > 280 ? "Error: " + msg.slice(0, 277) + "…" : "Error: " + msg, true);
       });
   }
 
@@ -962,11 +1051,28 @@
 
   function doRestore() {
     const port = document.getElementById("flash-port")?.value?.trim();
-    const deviceId = document.getElementById("flash-device")?.value?.trim();
+    let deviceId = document.getElementById("flash-device")?.value?.trim();
     const pathOpt = document.getElementById("flash-restore-file")?.value?.trim();
-    if (!port || !deviceId) {
-      setFlashStatus("restore-status", "Select port and device.", true);
+    if (!port) {
+      setFlashStatus("restore-status", "Select a port.", true);
       return;
+    }
+    if (!deviceId) deviceId = getDeviceForPort(port);
+    if (!deviceId) {
+      setFlashStatus("restore-status", "Select a device (or click Refresh & detect devices).", true);
+      return;
+    }
+    if (isFlashDeviceUf2(deviceId)) {
+      const suggested = getDeviceForPort(port);
+      if (suggested) {
+        deviceId = suggested;
+        const deviceSel = document.getElementById("flash-device");
+        if (deviceSel) deviceSel.value = deviceId;
+        updateFlashUf2Notice();
+      } else {
+        setFlashStatus("restore-status", "This device uses UF2; restore is not available here. Use the magnetic pogo cable. See FLASHING_UF2.md.", true);
+        return;
+      }
     }
     const fd = new FormData();
     fd.set("port", port);
@@ -994,11 +1100,28 @@
 
   function doFlash() {
     const port = document.getElementById("flash-port")?.value?.trim();
-    const deviceId = document.getElementById("flash-device")?.value?.trim();
+    let deviceId = document.getElementById("flash-device")?.value?.trim();
     const pathOpt = document.getElementById("flash-flash-file")?.value?.trim();
-    if (!port || !deviceId) {
-      setFlashStatus("flash-status", "Select port and device.", true);
+    if (!port) {
+      setFlashStatus("flash-status", "Select a port.", true);
       return;
+    }
+    if (!deviceId) deviceId = getDeviceForPort(port);
+    if (!deviceId) {
+      setFlashStatus("flash-status", "Select a device (or click Refresh & detect devices).", true);
+      return;
+    }
+    if (isFlashDeviceUf2(deviceId)) {
+      const suggested = getDeviceForPort(port);
+      if (suggested) {
+        deviceId = suggested;
+        const deviceSel = document.getElementById("flash-device");
+        if (deviceSel) deviceSel.value = deviceId;
+        updateFlashUf2Notice();
+      } else {
+        setFlashStatus("flash-status", "This device uses UF2; flash is not available here. Use the magnetic pogo cable. See FLASHING_UF2.md.", true);
+        return;
+      }
     }
     const fd = new FormData();
     fd.set("port", port);
@@ -1024,9 +1147,50 @@
       .catch((err) => setFlashStatus("flash-status", "Error: " + err.message, true));
   }
 
-  document.getElementById("btn-flash-backup")?.addEventListener("click", doBackup);
-  document.getElementById("btn-flash-restore")?.addEventListener("click", doRestore);
-  document.getElementById("btn-flash-flash")?.addEventListener("click", doFlash);
+  function deleteSelectedFlashFile(selectEl, statusId) {
+    const path = selectEl?.value?.trim();
+    if (!path) {
+      setFlashStatus(statusId, "Select a file from the list to delete.", true);
+      return;
+    }
+    if (!confirm("Delete this file from disk?\n\n" + path)) return;
+    setFlashStatus(statusId, "Deleting…", false);
+    fetch("/api/flash/file", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setFlashStatus(statusId, "File deleted.", false);
+          loadFlashArtifacts();
+        } else {
+          setFlashStatus(statusId, data.error || "Delete failed.", true);
+        }
+      })
+      .catch((err) => setFlashStatus(statusId, "Error: " + err.message, true));
+  }
+
+  function onFlashSectionClick(e) {
+    const id = e.target && e.target.id ? e.target.id : (e.target.closest && e.target.closest("[id]") ? e.target.closest("[id]").id : "");
+    if (id === "btn-flash-backup") { e.preventDefault(); doBackup(); return; }
+    if (id === "btn-flash-restore") { e.preventDefault(); doRestore(); return; }
+    if (id === "btn-flash-flash") { e.preventDefault(); doFlash(); return; }
+    if (id === "btn-flash-delete-restore") { e.preventDefault(); deleteSelectedFlashFile(document.getElementById("flash-restore-file"), "restore-status"); return; }
+    if (id === "btn-flash-delete-flash") { e.preventDefault(); deleteSelectedFlashFile(document.getElementById("flash-flash-file"), "flash-status"); return; }
+  }
+  const flashSection = document.getElementById("flash-section");
+  if (flashSection) flashSection.addEventListener("click", onFlashSectionClick);
+  document.getElementById("btn-flash-backup")?.addEventListener("click", (e) => { e.preventDefault(); doBackup(); });
+  document.getElementById("btn-flash-restore")?.addEventListener("click", (e) => { e.preventDefault(); doRestore(); });
+  document.getElementById("btn-flash-flash")?.addEventListener("click", (e) => { e.preventDefault(); doFlash(); });
+  document.getElementById("btn-flash-delete-restore")?.addEventListener("click", () => {
+    deleteSelectedFlashFile(document.getElementById("flash-restore-file"), "restore-status");
+  });
+  document.getElementById("btn-flash-delete-flash")?.addEventListener("click", () => {
+    deleteSelectedFlashFile(document.getElementById("flash-flash-file"), "flash-status");
+  });
 
   document.getElementById("btn-flash-build")?.addEventListener("click", () => {
     const deviceId = document.getElementById("flash-build-device")?.value?.trim();

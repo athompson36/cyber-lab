@@ -7,11 +7,28 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
+import time as _time
 import urllib.error
 import urllib.request
 from datetime import datetime
 
 from config import ARTIFACTS_DIR, BACKUPS_DIR, BUILD_CONFIG, FLASH_DEVICES, FIRMWARE_TARGETS, REPO_ROOT
+
+
+# Backup progress: shared state so UI can poll during long chunked reads.
+_backup_progress_lock = threading.Lock()
+_backup_progress = {}  # {"pct": 0-100, "chunk": N, "total_chunks": N, "status": "reading"|"done"|"error", "error": "..."}
+
+
+def get_backup_progress() -> dict:
+    with _backup_progress_lock:
+        return dict(_backup_progress)
+
+
+def _set_backup_progress(**kw):
+    with _backup_progress_lock:
+        _backup_progress.update(kw)
 
 
 def _list_serial_ports_fallback():
@@ -38,6 +55,21 @@ def _list_serial_ports_fallback():
 
 # Port path substrings to exclude (virtual/debug ports that are not ESP32 serial devices)
 _SERIAL_PORT_EXCLUDE = ("debug-console", "bluetooth-incoming", "tty.debug", "cu.debug")
+
+
+def get_alternate_port(port: str) -> str | None:
+    """Return the other port for the same device (cu <-> tty on macOS/Linux). None if no alternate exists."""
+    if not port or not os.path.isabs(port):
+        return None
+    base = os.path.basename(port)
+    dirpath = os.path.dirname(port)
+    if base.startswith("cu.") and ("usbmodem" in base.lower() or "usbserial" in base.lower()):
+        alt = os.path.join(dirpath, "tty." + base[3:])
+    elif base.startswith("tty.") and ("usbmodem" in base.lower() or "usbserial" in base.lower()):
+        alt = os.path.join(dirpath, "cu." + base[4:])
+    else:
+        return None
+    return alt if os.path.exists(alt) else None
 
 # Artifact .bin files that are components only — do not offer for flash (would write partial image)
 _FLASH_EXCLUDE_BIN = frozenset(("bootloader.bin", "partitions.bin"))
@@ -173,32 +205,70 @@ def list_serial_ports_with_detection(timeout_per_port=4):
     return result
 
 
+def _kill_esptool_on_port(port: str) -> None:
+    """Kill any running esptool process that is using this port (stale from a previous timed-out request)."""
+    if not port:
+        return
+    try:
+        out = subprocess.run(
+            ["pgrep", "-af", "esptool"],
+            capture_output=True, text=True, timeout=5,
+        )
+        for line in (out.stdout or "").splitlines():
+            if port in line or (get_alternate_port(port) or "") in line:
+                pid_str = line.strip().split()[0]
+                try:
+                    os.kill(int(pid_str), 9)
+                except (ValueError, ProcessLookupError, PermissionError):
+                    pass
+    except Exception:
+        pass
+
+
 def _esptool(*args, timeout=120):
-    """Run esptool (prefer 'esptool'; esptool.py is deprecated in v5+)."""
+    """Run esptool with explicit kill on timeout (prefer 'esptool'; esptool.py is deprecated in v5+)."""
     for cmd in ("esptool", "esptool.py"):
         try:
-            out = subprocess.run(
+            proc = subprocess.Popen(
                 [cmd] + list(args),
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout,
             )
-            return out.returncode == 0, out.stdout + out.stderr
+            try:
+                stdout, stderr = proc.communicate(timeout=timeout)
+                return proc.returncode == 0, (stdout or "") + (stderr or "")
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+                return False, "Timeout"
         except FileNotFoundError:
             continue
-        except subprocess.TimeoutExpired:
-            return False, "Timeout"
     return False, "esptool not found (pip install esptool)"
 
 
-def backup_flash(port: str, device_id: str, backup_type: str = "full"):
+def _sanitize_backup_name(name: str) -> str:
+    """Make a safe filename for backup: alphanumeric, dash, underscore; ensure .bin."""
+    if not name or not name.strip():
+        return ""
+    s = re.sub(r"[^\w\-.]", "_", name.strip())
+    s = re.sub(r"_+", "_", s).strip("_.")
+    if not s:
+        return ""
+    return s + ".bin" if not s.lower().endswith(".bin") else s
+
+
+def backup_flash(port: str, device_id: str, backup_type: str = "full", name: str = None):
     """
     Read flash to a file. backup_type: full, app (0x10000 for 0x10000 size ~1MB default), nvs.
+    name: optional custom filename (saved under BACKUPS_DIR); must be safe (alphanumeric, dash, underscore).
     Returns (success, path_or_error, size_bytes).
     """
     dev = FLASH_DEVICES.get(device_id)
     if not dev:
         return False, f"Unknown device: {device_id}", 0
+    if dev.get("flash_method") == "uf2":
+        return False, "This device uses UF2 flashing. Use the magnetic pogo cable and copy a UF2 file to the HT-n5262 drive. See device notes (e.g. devices/ht_mesh_pocket_10000/notes/FLASHING_UF2.md).", 0
     chip = dev["chip"]
     flash_size = dev.get("flash_size", "8MB")
     size_map = {"4MB": 4 * 1024 * 1024, "8MB": 8 * 1024 * 1024, "16MB": 16 * 1024 * 1024}
@@ -220,6 +290,10 @@ def backup_flash(port: str, device_id: str, backup_type: str = "full"):
     else:
         return False, f"Unknown backup_type: {backup_type}", 0
 
+    custom = _sanitize_backup_name(name) if name else ""
+    if custom:
+        fname = custom
+
     if backup_type == "app":
         addr = 0x10000
     elif backup_type == "nvs":
@@ -228,17 +302,71 @@ def backup_flash(port: str, device_id: str, backup_type: str = "full"):
         addr = 0
 
     path = os.path.join(BACKUPS_DIR, fname)
-    # Full flash read over serial can take 5–15+ min for 8MB/16MB; use 15 min.
-    backup_timeout = 900 if backup_type == "full" else 300
-    ok, msg = _esptool(
-        "--chip", chip,
-        "--port", port,
-        "read-flash", str(addr), str(size), path,
-        timeout=backup_timeout,
-    )
+
+    if backup_type == "full":
+        # Chunked read: ESP32-S3 USB-Serial/JTAG drops data on long reads.
+        # Read in 1MB chunks, retry each chunk up to 3 times, then concatenate.
+        ok, err = _chunked_read_flash(chip, port, addr, size, path)
+        if ok:
+            return True, path, size
+        return False, err, 0
+
+    ok, msg = _esptool("--chip", chip, "--port", port,
+                        "read-flash", str(addr), str(size), path,
+                        timeout=300)
     if ok and os.path.isfile(path):
         return True, path, size
     return False, msg or "Read failed", 0
+
+
+_CHUNK_SIZE = 0x100000  # 1 MB per chunk
+_CHUNK_RETRIES = 3
+
+
+def _chunked_read_flash(chip: str, port: str, start_addr: int, total_size: int, out_path: str):
+    """Read flash in 1MB chunks to avoid USB-Serial/JTAG corruption on long reads.
+    Updates _backup_progress so the UI can poll. Returns (success, error_message_or_None)."""
+    total_chunks = (total_size + _CHUNK_SIZE - 1) // _CHUNK_SIZE
+    _set_backup_progress(pct=0, chunk=0, total_chunks=total_chunks, status="reading", error=None)
+    tmp_dir = tempfile.mkdtemp(prefix="flash_chunks_")
+    try:
+        offset = start_addr
+        chunk_paths = []
+        remaining = total_size
+        chunk_idx = 0
+        while remaining > 0:
+            chunk_size = min(_CHUNK_SIZE, remaining)
+            chunk_file = os.path.join(tmp_dir, f"chunk_{offset:08x}.bin")
+            ok = False
+            last_err = ""
+            for attempt in range(_CHUNK_RETRIES):
+                ok, msg = _esptool(
+                    "--chip", chip, "--port", port,
+                    "read-flash", str(offset), str(chunk_size), chunk_file,
+                    timeout=180,
+                )
+                if ok and os.path.isfile(chunk_file) and os.path.getsize(chunk_file) == chunk_size:
+                    break
+                last_err = msg or "Read failed"
+                _time.sleep(2)
+            if not ok:
+                _set_backup_progress(status="error", error=f"Failed at 0x{offset:X}")
+                return False, last_err or f"Read failed at offset 0x{offset:X}"
+            chunk_paths.append(chunk_file)
+            offset += chunk_size
+            remaining -= chunk_size
+            chunk_idx += 1
+            _set_backup_progress(pct=round(100 * chunk_idx / total_chunks), chunk=chunk_idx)
+
+        _set_backup_progress(pct=100, status="assembling")
+        with open(out_path, "wb") as out_f:
+            for cp in chunk_paths:
+                with open(cp, "rb") as cf:
+                    shutil.copyfileobj(cf, out_f)
+        _set_backup_progress(status="done")
+        return True, None
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _write_flash_args(dev: dict):
@@ -256,6 +384,8 @@ def restore_flash(port: str, device_id: str, bin_path: str):
     dev = FLASH_DEVICES.get(device_id)
     if not dev:
         return False, f"Unknown device: {device_id}"
+    if dev.get("flash_method") == "uf2":
+        return False, "This device uses UF2 flashing. Use the magnetic pogo cable and copy a UF2 file to the HT-n5262 drive. See device notes."
     if not os.path.isfile(bin_path):
         return False, f"File not found: {bin_path}"
     chip = dev["chip"]
@@ -274,6 +404,8 @@ def flash_firmware(port: str, device_id: str, bin_path: str, addr: str = "0x0"):
     dev = FLASH_DEVICES.get(device_id)
     if not dev:
         return False, f"Unknown device: {device_id}"
+    if dev.get("flash_method") == "uf2":
+        return False, "This device uses UF2 flashing. Use the magnetic pogo cable and copy a UF2 file to the HT-n5262 drive. See device notes."
     if not os.path.isfile(bin_path):
         return False, f"File not found: {bin_path}"
     chip = dev["chip"]
@@ -550,3 +682,30 @@ def list_artifacts_and_backups(firmware_filter=None):
                     "size": os.path.getsize(full),
                 })
     return results
+
+
+def delete_artifact_or_backup(rel_path: str):
+    """
+    Delete a backup or artifact .bin file. rel_path is relative to REPO_ROOT (e.g. from list_artifacts_and_backups).
+    Returns (success, error_message).
+    """
+    if not rel_path or not rel_path.strip():
+        return False, "Path required"
+    rel_path = rel_path.strip().lstrip("/")
+    if not rel_path.lower().endswith(".bin"):
+        return False, "Only .bin files under artifacts can be deleted"
+    full = os.path.normpath(os.path.join(REPO_ROOT, rel_path))
+    try:
+        full = os.path.realpath(full)
+        artifacts_real = os.path.realpath(ARTIFACTS_DIR)
+    except OSError:
+        return False, "Invalid path"
+    if not full.startswith(artifacts_real + os.sep) and full != artifacts_real:
+        return False, "Path must be under artifacts"
+    if not os.path.isfile(full):
+        return False, "File not found"
+    try:
+        os.remove(full)
+        return True, None
+    except OSError as e:
+        return False, str(e)

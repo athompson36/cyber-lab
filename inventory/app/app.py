@@ -11,6 +11,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from urllib.parse import unquote
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
@@ -35,10 +36,14 @@ from config import (
 )
 from updates import get_updates
 from flash_ops import (
+    _kill_esptool_on_port,
     backup_flash,
     build_firmware,
+    delete_artifact_or_backup,
     download_release_firmware,
     flash_firmware,
+    get_alternate_port,
+    get_backup_progress,
     get_build_config,
     get_flash_devices,
     list_artifacts_and_backups,
@@ -721,6 +726,28 @@ def api_device_structure(device_id):
     return jsonify(structure)
 
 
+@app.route("/api/devices/<device_id>/notes/<path:filename>")
+def api_device_note(device_id, filename):
+    """Serve a device note file (e.g. FLASHING_UF2.md) from devices/<device_id>/notes/."""
+    if not device_id or not re.match(r"^[a-zA-Z0-9_-]+$", device_id):
+        return jsonify({"error": "Invalid device_id"}), 400
+    if not filename or ".." in filename or filename.startswith("/"):
+        return jsonify({"error": "Invalid filename"}), 400
+    notes_dir = os.path.join(REPO_ROOT, "devices", device_id, "notes")
+    path = os.path.normpath(os.path.join(notes_dir, filename))
+    try:
+        path = os.path.realpath(path)
+        notes_real = os.path.realpath(notes_dir)
+    except OSError:
+        return jsonify({"error": "Invalid path"}), 400
+    if not path.startswith(notes_real + os.sep) and path != notes_real:
+        return jsonify({"error": "Not found"}), 404
+    if not os.path.isfile(path):
+        return jsonify({"error": "File not found"}), 404
+    mimetype = "text/markdown" if filename.lower().endswith(".md") else "text/plain"
+    return send_file(path, mimetype=mimetype, as_attachment=False, download_name=os.path.basename(filename))
+
+
 @app.route("/api/devices/fetch-doc", methods=["POST"])
 def api_devices_fetch_doc():
     """Download a document from URL and save to devices/<device_id>/docs/ with correct naming.
@@ -1282,8 +1309,14 @@ def api_flash_ports():
 
 @app.route("/api/flash/devices")
 def api_flash_devices():
-    """List devices supported for flash/backup (esptool chip, flash_size)."""
-    return jsonify({"devices": get_flash_devices()})
+    """List devices supported for flash/backup (esptool chip, flash_size). Reload config so list is current without restart."""
+    import importlib
+    import config as config_module
+    importlib.reload(config_module)
+    devices = [{"id": did, **dict(d)} for did, d in config_module.FLASH_DEVICES.items()]
+    r = jsonify({"devices": devices})
+    r.headers["Cache-Control"] = "no-store, no-cache"
+    return r
 
 
 @app.route("/api/flash/artifacts")
@@ -1394,25 +1427,52 @@ def _flash_error_message(raw: str) -> str:
         return "Unknown error"
     s = re.sub(r"\x1b\[[0-9;]*m", "", raw)
     s = s.replace("\r", " ").replace("\n", " ").strip()
-    if "port is busy" in s.lower() or "resource temporarily unavailable" in s.lower() or "could not exclusively lock" in s.lower():
+    low = s.lower()
+    if "port is busy" in low or "resource temporarily unavailable" in low or "could not exclusively lock" in low:
         return "Port is busy or in use. Close Serial Monitor (Debug tab) and any other app using the port, then try again."
-    if "could not open" in s.lower() and ("port" in s.lower() or "doesn't exist" in s.lower()):
-        return "Could not open port. Close Serial Monitor and other apps using it, then try again."
+    if "no serial data received" in low or "failed to connect" in low:
+        return "Could not connect to device. Put the board in bootloader mode (hold BOOT, press RESET, release BOOT), then try again. Also try Refresh & detect devices — the port may have changed."
+    if ("could not open" in low or "doesn't exist" in low or "no such file" in low) and "port" in low:
+        return "Port not found — device may have disconnected or the port changed after a reset. Click Refresh & detect devices and try again."
     if s.strip().lower() == "timeout":
-        return "Backup timed out. Full flash can take 10+ minutes; try again or use a smaller backup (e.g. App partition only)."
+        return "Backup timed out. Full flash can take 20+ minutes; try again or use a smaller backup (e.g. App partition only)."
     return s[:400] if len(s) > 400 else s
+
+
+def _release_port(port: str, wait_longer: bool = False) -> None:
+    """Release a serial port: stop Serial Monitor if active, kill any stale esptool on it, then wait for OS release."""
+    if serial_is_active():
+        serial_stop()
+    _kill_esptool_on_port(port)
+    time.sleep(2.0 if wait_longer else 1.0)
 
 
 @app.route("/api/flash/backup", methods=["POST"])
 def api_flash_backup():
-    """Backup device flash (full, app, or nvs). Returns .bin file download."""
+    """Backup device flash (full, app, or nvs). Optional name for the backup file. Returns .bin file download."""
     data = request.get_json() or request.form or {}
     port = (data.get("port") or request.form.get("port") or "").strip()
     device_id = (data.get("device_id") or request.form.get("device_id") or "").strip()
     backup_type = (data.get("backup_type") or request.form.get("backup_type") or "full").strip().lower()
+    backup_name = (data.get("name") or request.form.get("name") or "").strip() or None
     if not port or not device_id:
         return jsonify({"error": "port and device_id required"}), 400
-    ok, path_or_err, _ = backup_flash(port, device_id, backup_type)
+    _release_port(port, wait_longer=(backup_type == "full"))
+    ok, path_or_err, _ = backup_flash(port, device_id, backup_type, name=backup_name)
+    # Retry on port-busy; full backup gets extra retries and delay (OS may need more time to release).
+    for _ in range(2 if backup_type == "full" else 1):
+        if not ok and path_or_err and ("busy" in path_or_err.lower() or "temporarily unavailable" in path_or_err.lower() or "exclusively lock" in path_or_err.lower()):
+            time.sleep(2.5 if backup_type == "full" else 1.5)
+            ok, path_or_err, _ = backup_flash(port, device_id, backup_type, name=backup_name)
+        else:
+            break
+    # If still busy, try the alternate port (same device: cu <-> tty).
+    if not ok and path_or_err and ("busy" in path_or_err.lower() or "temporarily unavailable" in path_or_err.lower() or "exclusively lock" in path_or_err.lower()):
+        alt = get_alternate_port(port)
+        if alt:
+            _release_port(alt, wait_longer=(backup_type == "full"))
+            time.sleep(1.0)
+            ok, path_or_err, _ = backup_flash(alt, device_id, backup_type, name=backup_name)
     if not ok:
         return jsonify({"error": _flash_error_message(path_or_err)}), 500
     if not os.path.isfile(path_or_err):
@@ -1425,6 +1485,12 @@ def api_flash_backup():
     )
 
 
+@app.route("/api/flash/backup/progress")
+def api_flash_backup_progress():
+    """Poll backup progress during a chunked full-flash read. Returns {pct, chunk, total_chunks, status}."""
+    return jsonify(get_backup_progress())
+
+
 @app.route("/api/flash/restore", methods=["POST"])
 def api_flash_restore():
     """Restore flash from uploaded .bin file or from path (artifacts/backups)."""
@@ -1433,6 +1499,7 @@ def api_flash_restore():
     path_arg = (request.form.get("path") or "").strip()
     if not port or not device_id:
         return jsonify({"error": "port and device_id required"}), 400
+    _release_port(port)
     bin_path = None
     used_temp = False
     if path_arg:
@@ -1452,6 +1519,12 @@ def api_flash_restore():
         return jsonify({"error": "Provide path or upload file"}), 400
     try:
         ok, msg = restore_flash(port, device_id, bin_path)
+        if not ok and msg and ("busy" in msg.lower() or "temporarily unavailable" in msg.lower() or "exclusively lock" in msg.lower()):
+            alt = get_alternate_port(port)
+            if alt:
+                _release_port(alt)
+                time.sleep(1.0)
+                ok, msg = restore_flash(alt, device_id, bin_path)
         if ok:
             return jsonify({"success": True, "message": msg or "Restore complete"})
         return jsonify({"success": False, "error": _flash_error_message(msg)}), 500
@@ -1490,6 +1563,7 @@ def api_flash_flash():
         addr = "0x0"
     if not port or not device_id:
         return jsonify({"error": "port and device_id required"}), 400
+    _release_port(port)
     bin_path = None
     used_temp = False
     if path_arg:
@@ -1509,6 +1583,12 @@ def api_flash_flash():
         return jsonify({"error": "Provide path or upload file"}), 400
     try:
         ok, msg = flash_firmware(port, device_id, bin_path, addr)
+        if not ok and msg and ("busy" in msg.lower() or "temporarily unavailable" in msg.lower() or "exclusively lock" in msg.lower()):
+            alt = get_alternate_port(port)
+            if alt:
+                _release_port(alt)
+                time.sleep(1.0)
+                ok, msg = flash_firmware(alt, device_id, bin_path, addr)
         if ok:
             return jsonify({"success": True, "message": msg or "Flash complete"})
         return jsonify({"success": False, "error": _flash_error_message(msg)}), 500
@@ -1518,6 +1598,19 @@ def api_flash_flash():
                 os.remove(bin_path)
             except OSError:
                 pass
+
+
+@app.route("/api/flash/file", methods=["DELETE"])
+def api_flash_delete_file():
+    """Delete a backup or artifact .bin file. Body: JSON with path (relative to repo, e.g. from artifacts list)."""
+    data = request.get_json() or {}
+    path_arg = (data.get("path") or request.args.get("path") or "").strip()
+    if not path_arg:
+        return jsonify({"error": "path required"}), 400
+    ok, err = delete_artifact_or_backup(path_arg)
+    if ok:
+        return jsonify({"success": True, "message": "File deleted"})
+    return jsonify({"success": False, "error": err or "Delete failed"}), 400
 
 
 # --- Project planning ---
@@ -2091,4 +2184,4 @@ if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes")
     print(f"Using DB: {get_database_path()}")
     print(f"Open http://127.0.0.1:{port}")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", port=port, debug=debug, threaded=True)

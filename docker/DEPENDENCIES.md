@@ -65,6 +65,17 @@ To change versions: set `ARG PLATFORMIO_VERSION=...` (and `ESPTOOL_VERSION`, `PY
 
 ---
 
+## Per-board / host (Backup / Flash)
+
+| Board | Host dependencies | Notes |
+|-------|-------------------|--------|
+| **T-Beam 1W**, **T-Deck Plus** | esptool, pyserial | In `inventory/app/requirements.txt`. Backup/restore/flash and `scripts/flash.sh` need esptool on PATH. |
+| **Heltec Mesh Pocket** | — | UF2 only; magnetic pogo + HT-n5262 drive. No esptool. |
+
+Builds for all above use **platformio-lab** (this image). Flash/backup from host.
+
+---
+
 ## Adding a dependency
 
 1. Add **apt**: `RUN apt-get update && apt-get install -y --no-install-recommends <pkg> && rm -rf /var/lib/apt/lists/*`

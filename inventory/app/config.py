@@ -147,6 +147,7 @@ FIRMWARE_REPOS_FOR_UPDATES = [
 ]
 
 # Flash/backup: device_id -> esptool chip and flash params (for backup/restore/flash)
+# flash_method "uf2" = no esptool; use magnetic pogo and UF2 drive (e.g. Heltec Mesh Pocket)
 FLASH_DEVICES = {
     "t_beam_1w": {
         "chip": "esp32s3",
@@ -159,6 +160,11 @@ FLASH_DEVICES = {
         "flash_size": "16MB",
         "flash_mode": "dio",
         "description": "LilyGO T-Deck Plus",
+    },
+    "ht_mesh_pocket_10000": {
+        "chip": "nrf52840",
+        "flash_method": "uf2",
+        "description": "Heltec Mesh Pocket 10000 (nRF52840, UF2 - magnetic pogo)",
     },
 }
 
