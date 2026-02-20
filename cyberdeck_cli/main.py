@@ -8,6 +8,7 @@ from cyberdeck_cli.device_cmd import app as device_app
 from cyberdeck_cli.firmware_cmd import app as firmware_app
 from cyberdeck_cli.flash_cmd import app as flash_app
 from cyberdeck_cli.inspect_cmd import app as inspect_app
+from cyberdeck_cli.map_cmd import app as map_app
 
 app = typer.Typer(
     name="cyberdeck",
@@ -19,6 +20,7 @@ app.add_typer(device_app, name="device", help="Device registry operations")
 app.add_typer(firmware_app, name="firmware", help="Firmware registry operations")
 app.add_typer(flash_app, name="flash", help="Flash and backup operations")
 app.add_typer(inspect_app, name="inspect", help="Hardware inspector")
+app.add_typer(map_app, name="map", help="Map regions, tile estimate, SD/tile validation")
 
 
 @app.callback()

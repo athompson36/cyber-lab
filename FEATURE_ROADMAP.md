@@ -238,7 +238,7 @@ Items from MeshCore README “Road-Map / To-Do” that affect this lab or T-Beam
 - ~~L15 PWA~~ Done.
 - L16: iOS / WatchOS native app (prerequisite: web app fully tested).
 - MeshCore roadmap items MC1–MC7 as upstream lands.
-- §16: Cyberdeck Manager — Map manager, Hardware inspector, CLI (Typer + FastAPI).
+- §16: Cyberdeck Manager — ~~Map manager, Hardware inspector, CLI~~ Done; optional FastAPI web later.
 - §17: PCB & 3D Design Stack — Phases 1–4.
 - Additional devices (e.g. Heltec, T-Deck Plus) per CONTEXT.md.
 
@@ -269,7 +269,7 @@ The Cyberdeck Manager extends the lab into a **device + firmware + map + flash +
 |------|--------|-------|
 | Device registry (JSON + DB) | 🟢 Done | `registry/devices/*.json` (8 devices); schema `devices` table in cyberdeck_schema.sql |
 | Firmware registry | 🟢 Done | registry/firmware/{meshcore,meshtastic}.json — upstream, variants, build flags, artifact pattern |
-| Map manager (regions, tiles, SD) | 🔴 Planned | Region scanner, wizard, tile calculator, SD validator |
+| Map manager (regions, tiles, SD) | 🟢 Done | scripts/map_wizard.py + sd_validator.py; `cyberdeck map list/estimate/validate/sd-validate` |
 | Flash (USB + SD Launcher) | 🟢 Done | Inventory app: esptool USB flash + UF2/SD launcher detection per device |
 | Hardware inspector | 🟢 Done | `cyberdeck inspect chip/mac/flash-size/ports` via esptool |
 | RF/CAN presets | 🟢 Done | `registry/rf_presets.json` (USA, EU, custom); CAN in schema |
