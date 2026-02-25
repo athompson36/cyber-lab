@@ -337,15 +337,21 @@ def api_workspace_chat():
         return jsonify({"error": "message required", "reply": ""}), 400
     if not get_openai_api_key():
         return jsonify({"error": "OpenAI API key required. Set it in Settings.", "reply": ""}), 400
+
+    system = "You are a lab assistant for a hardware workspace. The user may ask about objects on the bench or ask for help with a task (e.g. flashing a device, finding a tool). Answer briefly and helpfully."
+    with _workspace_detection_lock:
+        detections = list(_workspace_latest_detections)
+    if detections:
+        classes = [d.get("class", "?") for d in detections[:15]]
+        system += f" Currently visible (from camera): {', '.join(classes)}."
+    system += " The lab has an inventory of boards, tools, components, and accessories; you can suggest the user check the inventory for specific items."
+
     try:
         client = _openai_client()
         response = client.chat.completions.create(
             model=get_openai_model(),
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a lab assistant for a hardware workspace. The user may ask about objects on the bench or ask for help with a task (e.g. flashing a device, finding a tool). Answer briefly and helpfully.",
-                },
+                {"role": "system", "content": system},
                 {"role": "user", "content": message},
             ],
             max_tokens=500,
