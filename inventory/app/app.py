@@ -234,6 +234,9 @@ _workspace_cap_lock = threading.Lock()
 _workspace_latest_detections = []
 _workspace_detection_lock = threading.Lock()
 _workspace_frame_count = 0
+# Procedure steps from chat (AI-generated); current step index for overlay highlight.
+_workspace_procedure_steps = []
+_workspace_current_step_index = 0
 
 
 def _workspace_ensure_camera(device=0):
@@ -345,6 +348,7 @@ def api_workspace_chat():
         classes = [d.get("class", "?") for d in detections[:15]]
         system += f" Currently visible (from camera): {', '.join(classes)}."
     system += " The lab has an inventory of boards, tools, components, and accessories; you can suggest the user check the inventory for specific items."
+    system += " If the user asks for step-by-step instructions (e.g. 'help me flash the T-Beam', 'how do I set up...'), reply with ONLY a JSON array of steps, no other text. Format: [{\"step_index\": 1, \"text\": \"short instruction\", \"focus_keyword\": \"cable\"}, ...]. Use focus_keyword for the object to highlight (e.g. cable, board, phone). Otherwise reply with normal helpful text."
 
     try:
         client = _openai_client()
@@ -357,9 +361,54 @@ def api_workspace_chat():
             max_tokens=500,
         )
         reply = (response.choices[0].message.content or "").strip()
-        return jsonify({"reply": reply})
+        steps = []
+        # Try to parse reply as procedure steps (JSON array)
+        if reply.strip().startswith("["):
+            try:
+                parsed = json.loads(reply)
+                if isinstance(parsed, list) and parsed:
+                    global _workspace_procedure_steps, _workspace_current_step_index
+                    steps = [
+                        {
+                            "step_index": int(s.get("step_index", i + 1)),
+                            "text": str(s.get("text", "")),
+                            "focus_keyword": str(s.get("focus_keyword", "")).strip() or None,
+                        }
+                        for i, s in enumerate(parsed)
+                        if isinstance(s, dict)
+                    ]
+                    if steps:
+                        _workspace_procedure_steps = steps
+                        _workspace_current_step_index = 0
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return jsonify({"reply": reply, "steps": steps})
     except Exception as e:
         return jsonify({"error": str(e)[:200], "reply": ""}), 500
+
+
+@app.route("/api/workspace/procedure", methods=["GET"])
+def api_workspace_procedure():
+    """Return current procedure steps and current step index (for overlay and UI)."""
+    return jsonify({
+        "steps": list(_workspace_procedure_steps),
+        "current_index": _workspace_current_step_index,
+    })
+
+
+@app.route("/api/workspace/procedure/step", methods=["POST"])
+def api_workspace_procedure_step():
+    """Set current step index. Body: { \"index\": 0 }. Used by overlay to highlight the right object."""
+    data = request.get_json() or {}
+    index = data.get("index", 0)
+    global _workspace_current_step_index
+    try:
+        idx = int(index)
+        if 0 <= idx < len(_workspace_procedure_steps):
+            _workspace_current_step_index = idx
+    except (TypeError, ValueError):
+        pass
+    return jsonify({"current_index": _workspace_current_step_index})
 
 
 @app.route("/api/workspace/detections")
