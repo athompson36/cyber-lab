@@ -67,8 +67,9 @@ cyber-lab/                         # repo: athompson36/cyber-lab
 │   ├── scripts/
 │   │   └── build_db.py        # YAML → SQLite (inventory.db)
 │   └── app/                   # Flask web app
-│       ├── app.py             # Routes, Docker/status, flash, projects, AI, setup chat
+│       ├── app.py             # Routes, Docker/status, flash, projects, AI, setup chat, Workspace stream/chat/procedure
 │       ├── config.py          # REPO_ROOT, DB path, path_settings, AI settings, FLASH_DEVICES
+│       ├── vision_ops.py      # Workspace: YOLOv8 detection (run_detection), overlay drawing (draw_overlay)
 │       ├── flash_ops.py       # Backup, restore, flash; list_serial_ports, get_flash_devices
 │       ├── project_ops.py     # Proposals (list, load, save), BOM check, CSV/md export
 │       ├── map_ops.py         # Map regions, tile estimate
@@ -141,7 +142,7 @@ cyber-lab/                         # repo: athompson36/cyber-lab
 ### Inventory app (Python)
 
 - **File:** [inventory/app/requirements.txt](inventory/app/requirements.txt)
-- **Contents:** `flask>=3.0`, `pyyaml>=6.0`, `openai>=1.0`, `pyserial>=3.5`
+- **Contents:** `flask>=3.0`, `pyyaml>=6.0`, `openai>=1.0`, `pyserial>=3.5`, `opencv-python-headless>=4.8`, `ultralytics>=8.0.0` (Workspace object detection and overlay).
 - **Host deps (flash):** `esptool` (install on host for backup/restore/flash).
 
 ### MCP server (Node)
@@ -188,3 +189,4 @@ Rebuild after app/MCP code changes: `./scripts/rebuild-containers.sh`. At login 
 - **2026-02-24:** ensure-lab-services.sh and launchd plist for auto-start; MCP tool ensure_lab_services (rebuild + up).
 - **2026-02-25:** Part B rename (esp32 → cyber-lab): docs, scripts, paths (~/cyber-lab), Docker image cyber-lab-web, PROJECT_AUDIT/CONTEXT/FEATURE_ROADMAP/PROJECT_STRUCTURE/AGENT_DOCKER updated. GitHub repo rename and local folder rename remain manual.
 - **2026-02-25:** Part A.3.1 fs-dev migration: canonical stack `docker/cyber-lab-compose.yml` + `docker/cyber-lab-fs-dev.override.yml`; deploy script `scripts/deploy-cyber-lab-to-fs-dev.sh`; config forces REPO_ROOT paths when `REPO_ROOT=/workspace` or `CYBER_LAB_HOST=fs-dev`; PROJECT_STRUCTURE and AGENT_DOCKER_CONTEXT updated for fs-dev as primary production.
+- **2026-02-25:** Workspace AI overlay and object detection: YOLOv8 (`ultralytics`), `vision_ops.py` (run_detection, draw_overlay), stream with `?overlay=1`, chat panel and `POST /api/workspace/chat`, procedure steps and `GET/POST /api/workspace/procedure`, `GET /api/workspace/detections`. See `docs/plans/2026-02-25-workspace-ai-overlay-object-detection-design.md`.
