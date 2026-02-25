@@ -261,8 +261,8 @@ def _workspace_ensure_camera(device=0):
         return True, _workspace_cap
 
 
-def _gen_workspace_frames():
-    """Yield MJPEG frames from the global camera. Never releases the camera (client disconnect only stops this stream)."""
+def _gen_workspace_frames(overlay=False):
+    """Yield MJPEG frames from the global camera. If overlay is True, draw detection boxes and labels."""
     import cv2
     global _workspace_frame_count
     while True:
@@ -282,6 +282,14 @@ def _gen_workspace_frames():
                 detections = run_detection(frame.copy())
                 with _workspace_detection_lock:
                     _workspace_latest_detections[:] = detections
+            except Exception:
+                pass
+        if overlay:
+            with _workspace_detection_lock:
+                detections = list(_workspace_latest_detections)
+            try:
+                from vision_ops import draw_overlay
+                draw_overlay(frame, detections)
             except Exception:
                 pass
         _, jpeg = cv2.imencode(".jpg", frame)
@@ -330,8 +338,9 @@ def api_workspace_detections():
 
 @app.route("/api/workspace/stream")
 def api_workspace_stream():
-    """MJPEG stream from server webcam. Opens camera on first use and keeps it open for the app lifetime (object detection)."""
+    """MJPEG stream from server webcam. ?overlay=1 draws detection boxes and labels."""
     device = int(request.args.get("device", 0))
+    overlay = request.args.get("overlay", "0") == "1"
     try:
         import cv2
     except ImportError:
@@ -340,7 +349,7 @@ def api_workspace_stream():
     if not ok:
         return jsonify({"error": "No camera found at device " + str(device)}), 503
     return Response(
-        stream_with_context(_gen_workspace_frames()),
+        stream_with_context(_gen_workspace_frames(overlay=overlay)),
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
