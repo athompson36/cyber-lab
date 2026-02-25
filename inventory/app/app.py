@@ -11,6 +11,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from urllib.parse import unquote
 
@@ -178,6 +179,147 @@ def api_settings_paths_post():
         return jsonify(get_path_settings())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/ai/status")
+def api_settings_ai_status():
+    """Return AI API connection status: api_key_set, connected, message. Tries a minimal API call if key set."""
+    key = get_openai_api_key()
+    if not key:
+        return jsonify({"api_key_set": False, "connected": False, "message": "No API key set"})
+    try:
+        client = _openai_client()
+        # Minimal check: fetch one model to verify connection without spending tokens
+        next(iter(client.models.list()), None)
+        return jsonify({"api_key_set": True, "connected": True, "message": "Connected"})
+    except Exception as e:
+        return jsonify({
+            "api_key_set": True,
+            "connected": False,
+            "message": (str(e) or "Connection failed")[:200],
+        })
+
+
+@app.route("/api/settings/paths/status")
+def api_settings_paths_status():
+    """Return status for Docker and each path: exists (dir/file), message. Uses current path settings."""
+    result = {"docker_available": False, "docker_message": "", "paths": {}}
+    try:
+        ok, msg = _docker_available()
+        result["docker_available"] = ok
+        result["docker_message"] = (msg or "")[:150]
+    except Exception as e:
+        result["docker_message"] = str(e)[:150]
+    paths_config = get_path_settings()
+    for key in ("frontend_path", "backend_path", "database_path", "mcp_server_path"):
+        p = (paths_config.get(key) or "").strip()
+        entry = {"path": p, "exists": False, "type": None}
+        if p:
+            if key == "database_path":
+                entry["exists"] = os.path.isfile(p)
+                entry["type"] = "file"
+            else:
+                entry["exists"] = os.path.isdir(p)
+                entry["type"] = "dir"
+        result["paths"][key] = entry
+    return jsonify(result)
+
+
+# --- Workspace (webcam) ---
+# Single long-lived camera: open once on first stream, never release. Kept for object detection and 100% availability.
+_workspace_cap = None
+_workspace_cap_device = None
+_workspace_cap_lock = threading.Lock()
+
+
+def _workspace_ensure_camera(device=0):
+    """Open and hold the camera for device if not already open. Caller must hold _workspace_cap_lock when using cap."""
+    global _workspace_cap, _workspace_cap_device
+    try:
+        import cv2
+    except ImportError:
+        return False, None
+    with _workspace_cap_lock:
+        if _workspace_cap is not None and _workspace_cap_device == device and _workspace_cap.isOpened():
+            return True, _workspace_cap
+        if _workspace_cap is not None:
+            try:
+                _workspace_cap.release()
+            except Exception:
+                pass
+            _workspace_cap = None
+            _workspace_cap_device = None
+        cap = cv2.VideoCapture(device)
+        if not cap.isOpened():
+            return False, None
+        _workspace_cap = cap
+        _workspace_cap_device = device
+        return True, _workspace_cap
+
+
+def _gen_workspace_frames():
+    """Yield MJPEG frames from the global camera. Never releases the camera (client disconnect only stops this stream)."""
+    import cv2
+    while True:
+        with _workspace_cap_lock:
+            cap = _workspace_cap
+            if cap is None or not cap.isOpened():
+                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n")
+                return
+            ret, frame = cap.read()
+        if not ret:
+            break
+        _, jpeg = cv2.imencode(".jpg", frame)
+        if jpeg is not None:
+            chunk = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n"
+            try:
+                yield chunk
+            except (GeneratorExit, BrokenPipeError, ConnectionResetError, OSError):
+                # Client navigated away; stop this stream only — camera stays open
+                break
+    # Do not release cap; app keeps it for next stream and object detection
+
+
+@app.route("/api/workspace/cameras")
+def api_workspace_cameras():
+    """List available camera indices. If we already hold a device, include it without re-opening."""
+    result = {"cameras": [], "error": None}
+    try:
+        import cv2
+        with _workspace_cap_lock:
+            if _workspace_cap is not None and _workspace_cap_device is not None and _workspace_cap.isOpened():
+                result["cameras"].append({"id": _workspace_cap_device, "name": f"Camera {_workspace_cap_device}"})
+        for i in range(3):
+            if _workspace_cap is not None and _workspace_cap_device == i:
+                continue
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                result["cameras"].append({"id": i, "name": f"Camera {i}"})
+                cap.release()
+        if not result["cameras"]:
+            result["cameras"] = [{"id": 0, "name": "Camera 0"}]
+    except ImportError:
+        result["error"] = "opencv not installed (pip install opencv-python-headless)"
+    except Exception as e:
+        result["error"] = str(e)[:200]
+    return jsonify(result)
+
+
+@app.route("/api/workspace/stream")
+def api_workspace_stream():
+    """MJPEG stream from server webcam. Opens camera on first use and keeps it open for the app lifetime (object detection)."""
+    device = int(request.args.get("device", 0))
+    try:
+        import cv2
+    except ImportError:
+        return jsonify({"error": "opencv not installed"}), 503
+    ok, _ = _workspace_ensure_camera(device)
+    if not ok:
+        return jsonify({"error": "No camera found at device " + str(device)}), 503
+    return Response(
+        stream_with_context(_gen_workspace_frames()),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+    )
 
 
 # Allowed sort columns for /api/items (whitelist for SQL safety)
@@ -387,14 +529,14 @@ def _docker_images():
         if out.returncode != 0:
             return []
         all_images = [line.strip() for line in out.stdout.strip().splitlines() if line.strip()]
-        wanted = {"cyber-lab-mcp", "inventory-app", "app-inventory", "platformio-lab", "esp-idf-lab"}
+        wanted = {"cyber-lab-mcp", "cyber-lab-web", "inventory-app", "app-inventory", "platformio-lab", "esp-idf-lab"}
         return [img for img in all_images if img.split(":")[0] in wanted]
     except Exception:
         return []
 
 
 # Lab-related image/name prefixes for container list (only show these)
-_DOCKER_LAB_NAMES = {"app-inventory", "inventory-app", "cyber-lab-mcp", "platformio-lab", "esp-idf-lab", "inventory", "mcp", "platformio", "idf"}
+_DOCKER_LAB_NAMES = {"cyber-lab-web", "app-inventory", "inventory-app", "cyber-lab-mcp", "platformio-lab", "esp-idf-lab", "inventory", "mcp", "platformio", "idf", "web"}
 
 
 def _docker_containers():
@@ -526,7 +668,7 @@ def api_docker_tools():
             "description": "This UI: search, AI query, updates, Docker status & tools.",
             "type": "app",
             "available": True,
-            "command": "python inventory/app/app.py or docker compose -f inventory/app/docker-compose.yml up",
+            "command": "python inventory/app/app.py or docker compose -f inventory/app/docker-compose.yml up (image: cyber-lab-web)",
         },
         {
             "id": "mcp-server",

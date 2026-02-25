@@ -1,8 +1,10 @@
 # Cyber-Lab
 
-Unified development environment for **ESP32**, **Arduino**, **Teensy**, **Raspberry Pi**, **Pine64**, and related hardware. **Local-first, containerized builds** — build inside containers, **flash and serial from host** (macOS). See [CONTEXT.md](CONTEXT.md) for philosophy and layout; [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) for priorities.
+Unified development environment for **ESP32**, **Arduino**, **Teensy**, **Raspberry Pi**, **Pine64**, and related hardware. **Local-first, containerized builds** — build inside containers; **flash and serial from host** (macOS) or from **fs-dev** when the stack is deployed there.
 
-**Prerequisites:** Docker (for builds), Python 3 (for inventory app and scripts), [esptool](https://docs.espressif.com/projects/esptool/) on PATH (for flashing). Optional: OpenAI API key for AI query and datasheet analysis in the inventory app. **CI:** GitHub Actions build MeshCore and Meshtastic for T-Beam 1W in container; artifacts only (no flash).
+**Primary production:** Run the full lab on **fs-dev (192.168.4.100)** — `./scripts/deploy-cyber-lab-to-fs-dev.sh` then open **http://192.168.4.100:5050**. All hardware (USB, webcam) is on fs-dev; Workspace and flash work in the browser. See [CONTEXT.md](CONTEXT.md) for philosophy and layout; [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) for priorities.
+
+**Prerequisites:** Docker (for builds), Python 3 (for inventory app and scripts), [esptool](https://docs.espressif.com/projects/esptool/) on PATH (for flashing on host). Optional: OpenAI API key for AI query and datasheet analysis in the inventory app. **CI:** GitHub Actions build MeshCore and Meshtastic for T-Beam 1W in container; artifacts only (no flash).
 
 ---
 
@@ -40,9 +42,9 @@ docker build -t platformio-lab -f docker/Dockerfile .
 
 This builds MeshCore for T-Beam 1W (repeater) and writes `artifacts/t_beam_1w/meshcore/<date>/firmware.bin`. Other envs: `T_Beam_1W_SX1262_room_server`, `T_Beam_1W_SX1262_companion_radio_ble`. See [docker/README.md](docker/README.md).
 
-### 2. Flash from host
+### 2. Flash
 
-Prefer flashing on the host (USB is more reliable than Docker passthrough). Use the lab flash script (picks latest artifact or a given .bin):
+**On fs-dev:** Flash from the browser (UI) when the stack is deployed there; USB devices are passed into the container. **On Mac:** Prefer flashing on the host (USB is more reliable than Docker passthrough). Use the lab flash script (picks latest artifact or a given .bin):
 
 ```bash
 ./scripts/flash.sh

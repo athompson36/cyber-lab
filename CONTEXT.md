@@ -5,7 +5,8 @@
 **Host System:** Apple Mac Studio (Apple Silicon)\
 **Operating Model:** Local-first, containerized, deterministic builds\
 **Repository Type:** Embedded Mono-Lab\
-**Primary Assistant:** Cursor
+**Primary Assistant:** Cursor\
+**Access:** Frontend runs on fs-dev; use the browser to access the lab (http://192.168.4.100:5050). A native macOS / iPadOS / iOS suite is reserved for later if needed.
 
 ------------------------------------------------------------------------
 
@@ -53,7 +54,7 @@ Host builds are discouraged unless absolutely required.
 
 # 🧱 Top-Level Architecture
 
-    esp32/                 # repo: athompson36/esp32
+    cyber-lab/             # repo: athompson36/cyber-lab
     │
     ├── CONTEXT.md
     │
@@ -251,6 +252,12 @@ Planned for:
 -   SDR\
 -   spectrum analysis\
 -   LoRa sniffing
+
+------------------------------------------------------------------------
+
+# Workspace assist (future — L17)
+
+**AI Camera / Projector over the workspace:** Camera views the bench; AI identifies parts, boards, and tools; projector (or on-screen overlay) points out step-by-step instructions. Fully integrated in the app for assembly, flash, config, and troubleshooting. **Camera hardware:** A good-quality 4K USB webcam on the fs-dev server or Mac Studio is sufficient; the app uses the webcam stream (e.g. browser getUserMedia or a small local capture service) for vision and item identification.
 
 ------------------------------------------------------------------------
 

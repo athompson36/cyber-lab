@@ -2,6 +2,8 @@
 
 **Purpose:** Guidance for Docker in the lab: status, container list, start/stop/restart, which images matter, and what is acceptable when advising or implementing.
 
+**Primary production:** The Cyber-Lab stack runs on **fs-dev (192.168.4.100)**. Deploy with `./scripts/deploy-cyber-lab-to-fs-dev.sh`; then open **http://192.168.4.100:5050** in a browser. All hardware (USB for flash, 4K webcam for Workspace) is attached to fs-dev. Running the app locally on a Mac is a **development** option (no USB/camera unless passed through).
+
 ---
 
 ## 1. Status & availability
@@ -16,10 +18,11 @@
 | Image name       | Purpose |
 |------------------|---------|
 | cyber-lab-mcp    | MCP server for Cursor (project context, tools). |
-| inventory-app / app-inventory | Inventory web app (Flask). |
+| cyber-lab-web    | Web app (Flask): inventory, flash, Workspace, projects. Preferred name. |
+| inventory-app / app-inventory | Legacy names for the same web app (backward compatible). |
 | platformio-lab   | PlatformIO build image for firmware. |
 
-Backend filters `docker images` to these prefixes: `cyber-lab-mcp`, `inventory-app`, `app-inventory`, `platformio-lab`. Containers are filtered by image name or container name containing "inventory", "cyber-lab", "platformio".
+Backend filters `docker images` to these prefixes: `cyber-lab-mcp`, `cyber-lab-web`, `inventory-app`, `app-inventory`, `platformio-lab`. Containers are filtered by image name or container name containing "inventory", "cyber-lab", "platformio".
 
 ---
 
@@ -35,7 +38,7 @@ Compose files use **`restart: unless-stopped`** so that:
 - **Auto-restart:** If a container exits (crash or OOM), Docker restarts it.
 - **Auto-start:** After a host reboot, when the Docker daemon starts, containers that were started with `docker compose up -d` will be started again (assuming the daemon is configured to start on boot).
 
-Use `docker compose -f inventory/app/docker-compose.yml up -d` (or the MCP compose) to run in the background with this behavior.
+Use `docker compose -f inventory/app/docker-compose.yml up -d` (local) or on fs-dev use `docker compose -f docker/cyber-lab-compose.yml -f docker/cyber-lab-fs-dev.override.yml up -d` (or run `./scripts/deploy-cyber-lab-to-fs-dev.sh`) to run in the background with this behavior.
 
 ---
 
@@ -76,8 +79,15 @@ Use this for "what Docker tools do I have?" guidance.
 
 ---
 
-## 7. When to use this context
+## 7. Ensure services (rebuild + up)
+
+- **Script:** `./scripts/ensure-lab-services.sh` (from repo root) — Rebuilds images via `rebuild-containers.sh`, then `docker compose -f inventory/app/docker-compose.yml up -d`.
+- **MCP tool:** `ensure_lab_services` — Same as above; call from Cursor to keep Docker current and inventory app running. Optional arg `rebuild: false` to only bring up containers without rebuilding.
+- **Auto-start at login (macOS):** Copy `scripts/com.fstech.ensure-lab-services.plist` to `~/Library/LaunchAgents/`, fix paths in the plist, then `launchctl load ~/Library/LaunchAgents/com.fstech.ensure-lab-services.plist`. See [scripts/README-ensure-lab-services.md](../scripts/README-ensure-lab-services.md).
+
+## 8. When to use this context
 
 - User asks how to **see Docker status**, **start/stop a container**, or **why status is unavailable** (e.g. app in container, socket not mounted).
 - User asks **which images to build** or **how to rebuild** after code changes.
+- User wants **all containers running and Docker current with code** — use `ensure_lab_services` or run `ensure-lab-services.sh`.
 - Implementing or advising **Docker-related API or UI** (Docker & tools tab).

@@ -1,0 +1,25 @@
+# Canonical Cyber-Lab stack for fs-dev (192.168.4.100).
+# Run from repo root on fs-dev:
+#   docker compose -f docker/cyber-lab-compose.yml -f docker/cyber-lab-fs-dev.override.yml up -d --build
+# Then open http://192.168.4.100:5050 (all hardware attached to fs-dev; flash and Workspace camera in container).
+#
+# Override: docker/cyber-lab-fs-dev.override.yml adds /dev/video0 and any /dev/ttyUSB* /dev/ttyACM*
+# present on the host so the app can use the webcam and flash devices.
+
+services:
+  web:
+    image: cyber-lab-web
+    build:
+      context: ../inventory/app
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:5050:5050"
+    environment:
+      - REPO_ROOT=/workspace
+      - CYBER_LAB_HOST=fs-dev
+      - PORT=5050
+      - FLASK_DEBUG=0
+    volumes:
+      - ..:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

@@ -87,6 +87,11 @@ def _load_path_settings_file():
         return {}
 
 
+# When running on fs-dev (container with repo at /workspace), ignore path_settings for paths
+# so we never use Mac-specific paths; always use REPO_ROOT-relative paths.
+_CYBER_LAB_FS_DEV = os.environ.get("CYBER_LAB_HOST") == "fs-dev" or REPO_ROOT == "/workspace"
+
+
 def get_path_settings_defaults():
     """Default path values (used when not set in file)."""
     mcp_default = os.path.join(REPO_ROOT, "mcp-server")
@@ -104,6 +109,8 @@ def get_path_settings_defaults():
 def get_path_settings():
     """Return path settings for UI: each key with effective value (default or override)."""
     defaults = get_path_settings_defaults()
+    if _CYBER_LAB_FS_DEV:
+        return defaults
     overrides = _load_path_settings_file()
     return {
         "docker_container": (overrides.get("docker_container") or "").strip() or defaults["docker_container"],
@@ -134,7 +141,9 @@ def save_path_settings(docker_container=None, frontend_path=None, backend_path=N
 
 
 def get_database_path():
-    """Database path: override from path_settings if set, else default DB_PATH."""
+    """Database path: override from path_settings if set, else default DB_PATH. On fs-dev always use DB_PATH."""
+    if _CYBER_LAB_FS_DEV:
+        return DB_PATH
     overrides = _load_path_settings_file()
     path = (overrides.get("database_path") or "").strip()
     return path or DB_PATH

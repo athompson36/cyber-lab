@@ -1,0 +1,12 @@
+# Override for fs-dev: pass webcam and USB serial into the web container.
+# Use with: docker compose -f docker/cyber-lab-compose.yml -f docker/cyber-lab-fs-dev.override.yml up -d
+#
+# To add USB serial devices (for flashing), add lines under devices for each present port, e.g.:
+#   - /dev/ttyUSB0:/dev/ttyUSB0
+#   - /dev/ttyACM0:/dev/ttyACM0
+# The deploy script can generate an override that includes only existing devices.
+
+services:
+  web:
+    devices:
+      - /dev/video0:/dev/video0
