@@ -6,3 +6,7 @@ esptool>=4.0
 pypdf>=4.0
 # Optional: for agent device web search (GET /api/agent/device-search)
 duckduckgo-search>=6.0
+# Workspace tab: webcam stream (server-side capture)
+opencv-python-headless>=4.8
+# Workspace tab: object detection (YOLOv8)
+ultralytics>=8.0.0
