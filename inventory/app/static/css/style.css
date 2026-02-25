@@ -497,6 +497,13 @@ button:hover {
   border-radius: 4px;
   font-size: 0.875rem;
 }
+.workspace-overlay-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
 .workspace-note {
   font-size: 0.8125rem;
   color: var(--text-muted);

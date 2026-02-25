@@ -856,7 +856,9 @@
     const cameraSel = document.getElementById("workspace-camera");
     if (!feedEl) return;
     const device = cameraSel ? cameraSel.value || "0" : "0";
-    const streamUrl = "/api/workspace/stream?device=" + encodeURIComponent(device) + "&t=" + Date.now();
+    const overlayEl = document.getElementById("workspace-overlay");
+    const overlay = overlayEl && overlayEl.checked;
+    const streamUrl = "/api/workspace/stream?device=" + encodeURIComponent(device) + (overlay ? "&overlay=1" : "") + "&t=" + Date.now();
     loadWorkspaceCameras(device);
     if (placeholderEl) placeholderEl.removeAttribute("hidden");
     if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
@@ -889,6 +891,8 @@
   if (btnWorkspaceRefresh) btnWorkspaceRefresh.addEventListener("click", loadWorkspaceStream);
   const workspaceCameraSel = document.getElementById("workspace-camera");
   if (workspaceCameraSel) workspaceCameraSel.addEventListener("change", loadWorkspaceStream);
+  const workspaceOverlayEl = document.getElementById("workspace-overlay");
+  if (workspaceOverlayEl) workspaceOverlayEl.addEventListener("change", loadWorkspaceStream);
 
   function appendWorkspaceChatMessage(role, text) {
     const container = document.getElementById("workspace-chat-messages");
