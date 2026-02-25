@@ -353,6 +353,27 @@ def api_workspace_chat():
         classes = [d.get("class", "?") for d in detections[:15]]
         system += f" Currently visible (from camera): {', '.join(classes)}."
     system += " The lab has an inventory of boards, tools, components, and accessories; you can suggest the user check the inventory for specific items."
+
+    # When user asks "what's that?" style, add top inventory matches so the LLM can name them (v1 heuristic).
+    msg_lower = message.lower()
+    if ("what" in msg_lower and ("that" in msg_lower or "this" in msg_lower or "is this" in msg_lower)) or "tell me about" in msg_lower:
+        try:
+            conn = get_db()
+            if conn:
+                # Search by message words or detection classes
+                q = message.strip()[:50].replace("?", "").strip() or (", ".join([d.get("class", "") for d in detections[:5]) if detections else "board tool")
+                pattern = f"%{q}%"
+                cur = conn.execute(
+                    "SELECT id, name, category FROM items WHERE (name LIKE ? OR part_number LIKE ? OR notes LIKE ?) LIMIT 3",
+                    [pattern, pattern, pattern],
+                )
+                rows = cur.fetchall()
+                conn.close()
+                if rows:
+                    matches = ", ".join([f"{r[1]} (id: {r[0]})" for r in rows])
+                    system += f" Inventory matches that might be relevant: {matches}. You can say e.g. 'This might be the X from your inventory.'"
+        except Exception:
+            pass
     system += " If the user asks for step-by-step instructions (e.g. 'help me flash the T-Beam', 'how do I set up...'), reply with ONLY a JSON array of steps, no other text. Format: [{\"step_index\": 1, \"text\": \"short instruction\", \"focus_keyword\": \"cable\"}, ...]. Use focus_keyword for the object to highlight (e.g. cable, board, phone). Otherwise reply with normal helpful text."
 
     try:
