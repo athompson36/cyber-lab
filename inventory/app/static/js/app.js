@@ -56,6 +56,16 @@
     }
     if (tabId === "workspace") {
       loadWorkspaceStream();
+      fetch("/api/workspace/procedure")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.steps && data.steps.length) {
+            window._workspaceProcedureSteps = data.steps;
+            window._workspaceCurrentStepIndex = data.current_index;
+            if (typeof renderWorkspaceProcedureSteps === "function") renderWorkspaceProcedureSteps();
+          }
+        })
+        .catch(() => {});
     } else {
       const feedEl = document.getElementById("workspace-feed");
       if (feedEl) { feedEl.src = ""; feedEl.classList.remove("workspace-feed-live"); }
@@ -941,6 +951,44 @@
     workspaceChatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendWorkspaceChat(); } });
   }
   if (workspaceChatSend) workspaceChatSend.addEventListener("click", sendWorkspaceChat);
+
+  function renderWorkspaceProcedureSteps() {
+    const wrap = document.getElementById("workspace-procedure-wrap");
+    const listEl = document.getElementById("workspace-procedure-steps");
+    const currentEl = document.getElementById("workspace-procedure-current");
+    if (!wrap || !listEl) return;
+    const steps = window._workspaceProcedureSteps;
+    const currentIndex = window._workspaceCurrentStepIndex != null ? window._workspaceCurrentStepIndex : 0;
+    if (!steps || steps.length === 0) {
+      wrap.hidden = true;
+      return;
+    }
+    wrap.hidden = false;
+    listEl.innerHTML = steps.map((s, i) => {
+      const text = (s.text || "").trim() || "Step " + (i + 1);
+      const isCurrent = i === currentIndex;
+      return "<li" + (isCurrent ? " class=\"current\"" : "") + ">" + text.replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</li>";
+    }).join("");
+    if (currentEl) currentEl.textContent = "Step " + (currentIndex + 1) + " of " + steps.length;
+
+    function setStep(index) {
+      fetch("/api/workspace/procedure/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: index }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          window._workspaceCurrentStepIndex = data.current_index;
+          renderWorkspaceProcedureSteps();
+        })
+        .catch(() => {});
+    }
+    const prevBtn = document.getElementById("workspace-procedure-prev");
+    const nextBtn = document.getElementById("workspace-procedure-next");
+    if (prevBtn) prevBtn.onclick = () => setStep(Math.max(0, currentIndex - 1));
+    if (nextBtn) nextBtn.onclick = () => setStep(Math.min(steps.length - 1, currentIndex + 1));
+  }
 
   let lastFlashPorts = [];
   function loadFlashPorts(detect) {

@@ -177,6 +177,15 @@
       <div class="workspace-chat-col">
         <div class="workspace-chat-panel">
           <div id="workspace-chat-messages" class="workspace-chat-messages" role="log" aria-live="polite"></div>
+          <div id="workspace-procedure-wrap" class="workspace-procedure-wrap" hidden>
+            <div class="workspace-procedure-heading">Procedure</div>
+            <ol id="workspace-procedure-steps" class="workspace-procedure-steps"></ol>
+            <div class="workspace-procedure-nav">
+              <button type="button" id="workspace-procedure-prev" class="btn-refresh">Prev</button>
+              <span id="workspace-procedure-current">Step 1</span>
+              <button type="button" id="workspace-procedure-next" class="btn-refresh">Next</button>
+            </div>
+          </div>
           <div class="workspace-chat-input-row">
             <input type="text" id="workspace-chat-input" class="workspace-chat-input" placeholder="Ask about objects or request step-by-step help…" autocomplete="off">
             <button type="button" id="workspace-chat-send" class="btn-refresh">Send</button>

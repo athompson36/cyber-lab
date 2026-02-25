@@ -551,6 +551,28 @@ button:hover {
 .workspace-chat-messages .msg.assistant {
   color: var(--text-muted);
 }
+.workspace-procedure-wrap {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+.workspace-procedure-heading {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.workspace-procedure-steps {
+  margin: 0 0 0.5rem 0;
+  padding-left: 1.25rem;
+}
+.workspace-procedure-steps li.current {
+  font-weight: 600;
+  color: var(--text);
+}
+.workspace-procedure-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .workspace-chat-input-row {
   display: flex;
   gap: 0.5rem;
