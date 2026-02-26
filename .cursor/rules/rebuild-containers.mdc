@@ -1,34 +1,37 @@
 ---
-description: Always update and rebuild Docker containers when inventory app or MCP server code changes
+description: Deploy to fs-dev after inventory app or MCP changes; local Docker rebuild is optional
 alwaysApply: true
 ---
 
-# Rebuild containers when changes are made
+# Deploy to fs-dev after code changes
 
-When you make changes to code that runs inside the lab containers, **always rebuild the containers** so the running images reflect the latest code.
+We are **not using the local Docker container** for running the app; the lab runs on **fs-dev (192.168.4.100)**. When you change code that runs in the lab containers, **deploy to fs-dev** so the server builds and runs the new code.
 
-## When to rebuild
+## When to deploy
 
 - Any changes under **inventory/app/** (Flask app, config, static, templates)
-- Any changes under **mcp-server/** (MCP server source or config)
+- Any changes under **mcp-server/** (MCP server source or config) — if MCP is run on fs-dev
+- **Any changes to Docker logic** — Dockerfile(s), `docker/cyber-lab-compose.yml`, `docker/cyber-lab-fs-dev.override.yml`, or other compose/override files used for the lab stack. Always sync and rebuild on fs-dev so the running containers match the new logic.
 
-## How to rebuild
+## How to deploy (primary)
 
-From the **repo root**, run:
+From the **repo root**:
+
+```bash
+./scripts/deploy-cyber-lab-to-fs-dev.sh andrew@192.168.4.100
+```
+
+This syncs the repo to fs-dev and runs `docker compose -f docker/cyber-lab-compose.yml -f docker/cyber-lab-fs-dev.override.yml up -d --build` on the server. The **build runs on fs-dev**; no local Docker needed.
+
+Then open **http://192.168.4.100:5050** in a browser.
+
+## Local Docker (optional)
+
+If you want to run or build containers **locally** (e.g. for testing without fs-dev):
 
 ```bash
 ./scripts/rebuild-containers.sh
+docker compose -f inventory/app/docker-compose.yml up -d
 ```
 
-Or manually:
-
-```bash
-docker compose -f inventory/app/docker-compose.yml build
-docker compose -f mcp-server/docker-compose.yml build
-```
-
-## After editing
-
-1. Run the rebuild script (or the two `docker compose ... build` commands above).
-2. If the user runs the app with Docker, remind them to restart the container(s) or run `docker compose -f inventory/app/docker-compose.yml up` to use the new image.
-3. For the MCP server, Cursor will use the new image on the next MCP invocation if the image was rebuilt.
+Local rebuild is **optional**; the primary workflow is deploy to fs-dev.

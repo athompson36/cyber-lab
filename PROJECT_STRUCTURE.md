@@ -29,7 +29,7 @@ cyber-lab/                         # repo: athompson36/cyber-lab
 ├── REPOS.md                    # Lab repo index (Meshtastic, MeshCore, etc.)
 ├── current_project.md         # ESP32/SBC project ideas and links
 │
-├── .cursor/rules/             # Cursor agent rules (rebuild-containers, setup-context, lab-guidance, docker-and-commit, project-structure)
+├── .cursor/rules/             # Cursor agent rules (deploy fs-dev, setup-context, lab-guidance, docker-and-commit, project-structure)
 │
 ├── artifacts/                 # Generated / persisted at runtime
 │   ├── ai_settings.json       # AI API key, model, base_url (from Settings)
@@ -69,7 +69,7 @@ cyber-lab/                         # repo: athompson36/cyber-lab
 │   └── app/                   # Flask web app
 │       ├── app.py             # Routes, Docker/status, flash, projects, AI, setup chat, Workspace stream/chat/procedure
 │       ├── config.py          # REPO_ROOT, DB path, path_settings, AI settings, FLASH_DEVICES
-│       ├── vision_ops.py      # Workspace: YOLOv8 detection (run_detection), overlay drawing (draw_overlay)
+│       ├── vision_ops.py      # Workspace: YOLOv8-seg detection (masks/contours), overlay (draw_overlay); fallback to box-only
 │       ├── flash_ops.py       # Backup, restore, flash; list_serial_ports, get_flash_devices
 │       ├── project_ops.py     # Proposals (list, load, save), BOM check, CSV/md export
 │       ├── map_ops.py         # Map regions, tile estimate
@@ -168,7 +168,7 @@ cyber-lab/                         # repo: athompson36/cyber-lab
 
 **fs-dev (primary production):** Run the full lab on fs-dev (192.168.4.100) with `./scripts/deploy-cyber-lab-to-fs-dev.sh [user@host]`. Uses `docker/cyber-lab-compose.yml` + `docker/cyber-lab-fs-dev.override.yml`; open http://192.168.4.100:5050. To pass USB serial for flashing, add device lines (e.g. `- /dev/ttyUSB0:/dev/ttyUSB0`) to the override.
 
-Rebuild after app/MCP code changes: `./scripts/rebuild-containers.sh`. At login (optional): `scripts/ensure-lab-services.sh` or launchd plist `com.fstech.ensure-lab-services.plist` (see [scripts/README-ensure-lab-services.md](scripts/README-ensure-lab-services.md)). MCP tool **ensure_lab_services** runs rebuild + up from Cursor. See [docs/AGENT_DOCKER_CONTEXT.md](docs/AGENT_DOCKER_CONTEXT.md) for status, start/stop, and restart policy.
+Deploy after app/MCP code changes: `./scripts/deploy-cyber-lab-to-fs-dev.sh` (build runs on fs-dev; we do not use local Docker for running the app). Local rebuild optional: `./scripts/rebuild-containers.sh`. At login (optional): `scripts/ensure-lab-services.sh` or launchd plist. See [docs/AGENT_DOCKER_CONTEXT.md](docs/AGENT_DOCKER_CONTEXT.md) for status, start/stop, and restart policy.
 
 ---
 
@@ -190,3 +190,4 @@ Rebuild after app/MCP code changes: `./scripts/rebuild-containers.sh`. At login 
 - **2026-02-25:** Part B rename (esp32 → cyber-lab): docs, scripts, paths (~/cyber-lab), Docker image cyber-lab-web, PROJECT_AUDIT/CONTEXT/FEATURE_ROADMAP/PROJECT_STRUCTURE/AGENT_DOCKER updated. GitHub repo rename and local folder rename remain manual.
 - **2026-02-25:** Part A.3.1 fs-dev migration: canonical stack `docker/cyber-lab-compose.yml` + `docker/cyber-lab-fs-dev.override.yml`; deploy script `scripts/deploy-cyber-lab-to-fs-dev.sh`; config forces REPO_ROOT paths when `REPO_ROOT=/workspace` or `CYBER_LAB_HOST=fs-dev`; PROJECT_STRUCTURE and AGENT_DOCKER_CONTEXT updated for fs-dev as primary production.
 - **2026-02-25:** Workspace AI overlay and object detection: YOLOv8 (`ultralytics`), `vision_ops.py` (run_detection, draw_overlay), stream with `?overlay=1`, chat panel and `POST /api/workspace/chat`, procedure steps and `GET/POST /api/workspace/procedure`, `GET /api/workspace/detections`. See `docs/plans/2026-02-25-workspace-ai-overlay-object-detection-design.md`.
+- **2026-02-26:** Workspace detection: YOLOv8-seg (masks/contours) for irregular shapes; fallback to box-only; filter by contour area; overlay draws contours when present. See `docs/plans/2026-02-26-workspace-segmentation-masks-design.md`.
