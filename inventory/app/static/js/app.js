@@ -56,6 +56,7 @@
     }
     if (tabId === "workspace") {
       loadWorkspaceStream();
+      loadWorkspaceBaselineStatus();
       fetch("/api/workspace/procedure")
         .then((r) => r.json())
         .then((data) => {
@@ -858,7 +859,9 @@
     const device = cameraSel ? cameraSel.value || "0" : "0";
     const overlayEl = document.getElementById("workspace-overlay");
     const overlay = overlayEl && overlayEl.checked;
-    const streamUrl = "/api/workspace/stream?device=" + encodeURIComponent(device) + (overlay ? "&overlay=1" : "") + "&t=" + Date.now();
+    const flipEl = document.getElementById("workspace-flip");
+    const flip = flipEl && flipEl.checked;
+    const streamUrl = "/api/workspace/stream?device=" + encodeURIComponent(device) + (overlay ? "&overlay=1" : "") + (flip ? "&flip=1" : "&flip=0") + "&t=" + Date.now();
     loadWorkspaceCameras(device);
     if (placeholderEl) placeholderEl.removeAttribute("hidden");
     if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
@@ -887,12 +890,51 @@
     feedEl.src = streamUrl;
   }
 
+  function loadWorkspaceBaselineStatus() {
+    const el = document.getElementById("workspace-baseline-status");
+    if (!el) return;
+    fetch("/api/workspace/baseline")
+      .then((r) => r.json())
+      .then((data) => {
+        const classes = data.classes || [];
+        el.textContent = classes.length
+          ? "Baseline (filtered from detection): " + classes.join(", ")
+          : "Baseline not set. Clear the workspace to only keyboard/mat, then click Calibrate workstation.";
+      })
+      .catch(() => { el.textContent = ""; });
+  }
+
+  const btnWorkspaceCalibrate = document.getElementById("btn-workspace-calibrate");
+  if (btnWorkspaceCalibrate) {
+    btnWorkspaceCalibrate.addEventListener("click", () => {
+      btnWorkspaceCalibrate.disabled = true;
+      fetch("/api/workspace/calibrate", { method: "POST", headers: { "Content-Type": "application/json" } })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            const el = document.getElementById("workspace-baseline-status");
+            if (el) el.textContent = "Calibrate failed: " + data.error;
+          } else {
+            loadWorkspaceBaselineStatus();
+            loadWorkspaceStream();
+          }
+        })
+        .catch(() => {
+          const el = document.getElementById("workspace-baseline-status");
+          if (el) el.textContent = "Calibrate failed.";
+        })
+        .finally(() => { btnWorkspaceCalibrate.disabled = false; });
+    });
+  }
+
   const btnWorkspaceRefresh = document.getElementById("btn-workspace-refresh");
   if (btnWorkspaceRefresh) btnWorkspaceRefresh.addEventListener("click", loadWorkspaceStream);
   const workspaceCameraSel = document.getElementById("workspace-camera");
   if (workspaceCameraSel) workspaceCameraSel.addEventListener("change", loadWorkspaceStream);
   const workspaceOverlayEl = document.getElementById("workspace-overlay");
   if (workspaceOverlayEl) workspaceOverlayEl.addEventListener("change", loadWorkspaceStream);
+  const workspaceFlipEl = document.getElementById("workspace-flip");
+  if (workspaceFlipEl) workspaceFlipEl.addEventListener("change", loadWorkspaceStream);
 
   function appendWorkspaceChatMessage(role, text) {
     const container = document.getElementById("workspace-chat-messages");

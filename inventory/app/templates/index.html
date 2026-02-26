@@ -166,8 +166,14 @@
           <input type="checkbox" id="workspace-overlay" aria-label="Show object detection overlay">
           Overlay
         </label>
+        <label class="workspace-overlay-toggle">
+          <input type="checkbox" id="workspace-flip" checked aria-label="Flip video right-side up (for Logitech etc. mounted upside down)">
+          Flip video
+        </label>
         <button type="button" id="btn-workspace-refresh" class="btn-refresh">Refresh</button>
+        <button type="button" id="btn-workspace-calibrate" class="btn-refresh">Calibrate workstation</button>
       </div>
+      <p id="workspace-baseline-status" class="workspace-baseline-status" aria-live="polite"></p>
     </div>
     <p class="workspace-note">Live view from the server webcam (4K USB recommended). Stream is from this app’s host; if the app runs in Docker, pass the device through (e.g. uncomment <code>devices: - /dev/video0</code> in <code>docker-compose.yml</code>, or <code>--device /dev/video0</code> when running the container).</p>
     <div class="workspace-layout">

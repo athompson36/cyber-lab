@@ -238,6 +238,29 @@ _workspace_frame_count = 0
 _workspace_procedure_steps = []
 _workspace_current_step_index = 0
 
+WORKSPACE_BASELINE_PATH = os.path.join(ARTIFACTS_DIR, "workspace_baseline.json")
+
+
+def _workspace_baseline_classes() -> set:
+    """Return set of class names (lowercase) to filter from detection (always-present items)."""
+    try:
+        if os.path.isfile(WORKSPACE_BASELINE_PATH):
+            with open(WORKSPACE_BASELINE_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            classes = data.get("classes") or []
+            return { (c or "").strip().lower() for c in classes if (c or "").strip() }
+    except Exception:
+        pass
+    return set()
+
+
+def _workspace_apply_baseline_filter(detections: list) -> list:
+    """Return detections with baseline (always-present) classes removed."""
+    baseline = _workspace_baseline_classes()
+    if not baseline:
+        return detections
+    return [d for d in detections if (d.get("class") or "").strip().lower() not in baseline]
+
 
 def _workspace_ensure_camera(device=0):
     """Open and hold the camera for device if not already open. Caller must hold _workspace_cap_lock when using cap."""
@@ -286,6 +309,7 @@ def _gen_workspace_frames(overlay=False, flip_video=True):
             try:
                 from vision_ops import run_detection
                 detections = run_detection(frame.copy())
+                detections = _workspace_apply_baseline_filter(detections)
                 with _workspace_detection_lock:
                     _workspace_latest_detections[:] = detections
             except Exception:
@@ -446,10 +470,47 @@ def api_workspace_procedure_step():
 
 @app.route("/api/workspace/detections")
 def api_workspace_detections():
-    """Return latest object detections from the workspace camera stream (for chat and overlay)."""
+    """Return latest object detections from the workspace camera stream (for chat and overlay). Baseline classes are already filtered from stored detections."""
     with _workspace_detection_lock:
         detections = list(_workspace_latest_detections)
     return jsonify({"detections": detections})
+
+
+@app.route("/api/workspace/baseline")
+def api_workspace_baseline():
+    """Return current workspace baseline (classes filtered from detection)."""
+    classes = sorted(_workspace_baseline_classes())
+    return jsonify({"classes": classes})
+
+
+@app.route("/api/workspace/calibrate", methods=["POST"])
+def api_workspace_calibrate():
+    """Set workspace baseline from current frame: all detected classes are saved and filtered from future detection."""
+    try:
+        import cv2
+    except ImportError:
+        return jsonify({"error": "opencv not installed"}), 503
+    ok, cap = _workspace_ensure_camera(0)
+    if not ok or cap is None:
+        return jsonify({"error": "No camera available"}), 503
+    with _workspace_cap_lock:
+        ret, frame = _workspace_cap.read() if _workspace_cap else (False, None)
+    if not ret or frame is None:
+        return jsonify({"error": "Could not read frame"}), 503
+    frame = cv2.rotate(frame, cv2.ROTATE_180)
+    try:
+        from vision_ops import run_detection
+        raw = run_detection(frame.copy())
+    except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+    classes = sorted({(d.get("class") or "").strip() for d in raw if (d.get("class") or "").strip()})
+    try:
+        os.makedirs(os.path.dirname(WORKSPACE_BASELINE_PATH), exist_ok=True)
+        with open(WORKSPACE_BASELINE_PATH, "w", encoding="utf-8") as f:
+            json.dump({"classes": classes}, f, indent=2)
+    except Exception as e:
+        return jsonify({"error": "Could not save baseline: " + str(e)[:150]}), 500
+    return jsonify({"baseline": classes})
 
 
 @app.route("/api/workspace/stream")
